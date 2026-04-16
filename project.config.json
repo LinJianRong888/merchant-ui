@@ -2,7 +2,7 @@
   "miniprogramRoot": "./dist",
   "projectname": "merchant-ui",
   "description": "商户端",
-  "appid": "touristappid",
+  "appid": "wxb205f82231fa15c3",
   "setting": {
     "urlCheck": true,
     "es6": false,
