@@ -1,6 +1,6 @@
 # merchant-ui 项目状态说明
 
-更新日期：2026-04-12
+更新日期：2026-04-20
 
 ## 1. 项目当前定位
 
@@ -50,6 +50,55 @@
   - `POST /api/v1/wx/miniapp/phone-number/`
 - 当前项目固定使用的 `app_slug` 为：`merchant-miniapp`
 - API 调用已集中放在 `src/api/miniapp-auth.js`，便于后续单独编写测试。
+
+### 2.6 用户地址管理功能
+
+新增功能模块完整实现：
+
+**API 层：**
+- 已实现 `src/api/user-addresses.js`
+  - `listUserAddresses()` - 获取用户所有地址
+  - `getUserAddress(addressId)` - 获取单个地址详情
+  - `createUserAddress(addressData)` - 新增地址
+  - `updateUserAddress(addressId, addressData)` - 编辑地址
+  - `deleteUserAddress(addressId)` - 删除地址
+
+**UI 页面：**
+1. **地址管理列表页** - `src/pages/user/addresses/index`
+   - 展示用户所有地址列表
+   - 支持编辑、删除、新增地址
+   - 加载、错误、空状态处理
+   - 下拉刷新功能
+
+2. **地址编辑表单页** - `src/pages/user/addresses/edit/index`
+   - 完整的地址编辑表单
+   - 字段：收货人、手机号、省份、城市、区县、详细地址、邮编
+   - 支持新增和编辑两种模式
+   - 表单验证和错误提示
+   - 默认地址设置
+
+3. **订单地址选择页** - `src/pages/orders/address-select/index`
+   - 下单时展示用户地址列表供选择
+   - 快速新增地址入口
+   - 集成完整支付流程（创建订单 → 拉起支付 → 轮询确认）
+   - 导航回订单列表
+
+**下单流程优化：**
+- 修改商品详情页：点击"立即下单" → 直接导航到地址选择页
+- 移除硬编码的测试地址
+- 用户必须选择实际地址进行下单
+- 完整的订单创建和支付流程集成
+
+**文件结构：**
+```
+src/api/user-addresses.js
+src/pages/user/addresses/
+  ├── index.vue / index.config.js / index.scss
+  └── edit/
+      ├── index.vue / index.config.js / index.scss
+src/pages/orders/address-select/
+  ├── index.vue / index.config.js / index.scss
+```
 
 ## 3. 当前状态管理设计
 
@@ -135,18 +184,45 @@ pnpm build:weapp
 
 - `src/utils/request.js`：基础请求封装
 - `src/api/miniapp-auth.js`：微信小程序鉴权 API 层
+- `src/api/user-addresses.js`：用户地址管理 API 层
 - `src/stores/auth.js`：纯状态管理的认证 store
 - `src/app.js`：Pinia 与 Vue Query 初始化入口
-- `docs/wechat-miniapp-api.md`：当前参考的接口文档
+- `src/pages/user/addresses/index.vue`：地址管理列表页
+- `src/pages/user/addresses/edit/index.vue`：地址编辑表单页
+- `src/pages/orders/address-select/index.vue`：订单地址选择页
+- `docs/wechat-miniapp-api.md`：微信小程序接口文档
+- `docs/user-addresses.md`：用户地址 API 文档
+- `docs/address-management-flow.md`：地址管理与订单流程完整文档（新增）
 
 ## 8. 下次继续开发前建议先确认的事项
 
-1. 后端 `/api/v1/wx/miniapp/user-info/` 的实际返回字段是否稳定包含 `identity_id`。
+1. ~~后端 `/api/v1/wx/miniapp/user-info/` 的实际返回字段是否稳定包含 `identity_id`。~~
+   - **已确认**：已接入新鉴权模式
+   
 2. 新首页要先接入哪条链路：
    - 只做 `wx.login()` 登录
    - 登录后立即拉 `user-info`
    - 登录后再接手机号授权
+   
 3. 是否需要将页面侧调用继续整理成 composable，例如 `useMiniappAuth()`。
+
+4. **地址管理功能已完成**
+   - 用户地址 CRUD 操作已全部实现
+   - 下单流程已集成地址选择
+   - 建议后续测试：
+     - 新增、编辑、删除地址功能
+     - 下单时的地址选择和支付流程
+     - 各类异常场景处理（网络错误、表单验证等）
+
+## 9. 已验证构建结果
+
+- 2026-04-20：添加地址管理和选择功能后构建成功
+  ```bash
+  ✓ 186 modules transformed
+  ✓ built in 9.46s
+  ```
+- 所有新页面（地址编辑、地址选择）已正常编译
+- 未产生任何构建错误或警告
 
 ## 9. 当前结论
 

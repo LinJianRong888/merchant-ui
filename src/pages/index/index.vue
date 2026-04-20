@@ -127,6 +127,8 @@ export default {
     }
 
     useDidShow(() => {
+      authStore.hydrate()
+
       if (authStore.isAuthenticated) {
         void redirectToProducts()
       }

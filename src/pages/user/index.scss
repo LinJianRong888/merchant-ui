@@ -1,0 +1,169 @@
+.user-page {
+	position: relative;
+	min-height: 100vh;
+	overflow: hidden;
+	padding: 32px 24px 40px;
+	box-sizing: border-box;
+	background: linear-gradient(180deg, #f8f3ea 0%, #f3ecdf 48%, #efe6d6 100%);
+	color: #201c17;
+}
+
+.user-page__glow {
+	position: absolute;
+	border-radius: 999px;
+	filter: blur(30px);
+	opacity: 0.82;
+	pointer-events: none;
+}
+
+.user-page__glow--top {
+	top: -108px;
+	right: -76px;
+	width: 280px;
+	height: 280px;
+	background: rgb(255 199 81 / 20%);
+}
+
+.user-page__glow--bottom {
+	left: -88px;
+	bottom: 48px;
+	width: 220px;
+	height: 220px;
+	background: rgb(172 123 61 / 12%);
+}
+
+.user-profile,
+.user-menu {
+	position: relative;
+	border: 1px solid rgb(101 71 32 / 10%);
+	border-radius: 30px;
+	background: linear-gradient(180deg, rgb(255 252 247 / 94%) 0%, rgb(255 248 239 / 88%) 100%);
+	box-shadow: 0 18px 42px rgb(92 67 35 / 8%);
+	backdrop-filter: blur(10px);
+}
+
+.user-profile {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	padding: 24px;
+	margin-bottom: 24px;
+}
+
+.user-profile__avatar {
+	flex-shrink: 0;
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #ffca4c 0%, #f4b834 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 8px 20px rgb(244 184 52 / 24%);
+}
+
+.user-profile__avatar-text {
+	font-size: 32px;
+	font-weight: 700;
+	color: #33260d;
+}
+
+.user-profile__info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+.user-profile__name {
+	font-size: 32px;
+	font-weight: 700;
+	color: #231d18;
+}
+
+.user-profile__phone {
+	font-size: 24px;
+	color: #6d6257;
+}
+
+.user-menu {
+	padding: 12px;
+}
+
+.user-menu__item {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 20px 16px;
+	border-radius: 20px;
+	background: rgb(255 255 255 / 58%);
+	border: 1px solid rgb(101 71 32 / 8%);
+	transition: background-color 180ms ease;
+}
+
+.user-menu__item:active {
+	background: rgb(255 255 255 / 78%);
+}
+
+.user-menu__item--danger:active {
+	background: rgb(255 239 236 / 78%);
+}
+
+.user-menu__item--danger {
+	background: rgb(255 239 236 / 58%);
+	border-color: rgb(161 54 39 / 20%);
+}
+
+.user-menu__item--danger .user-menu__icon {
+	color: #a54d39;
+}
+
+.user-menu__item--danger .user-menu__title {
+	color: #a54d39;
+}
+
+.user-menu__icon {
+	flex-shrink: 0;
+	font-size: 28px;
+	width: 48px;
+	text-align: center;
+}
+
+.user-menu__content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.user-menu__title {
+	font-size: 30px;
+	font-weight: 700;
+	color: #231d18;
+}
+
+.user-menu__desc {
+	font-size: 22px;
+	color: #6d6257;
+}
+
+.user-menu__arrow {
+	flex-shrink: 0;
+	font-size: 32px;
+	color: #a17235;
+	font-weight: 300;
+}
+
+.user-footer {
+	position: relative;
+	text-align: center;
+	margin-top: 48px;
+	padding: 16px;
+}
+
+.user-footer__version {
+	font-size: 22px;
+	color: #8b7a65;
+}

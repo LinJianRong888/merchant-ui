@@ -1,0 +1,260 @@
+.addresses-page {
+	position: relative;
+	min-height: 100vh;
+	overflow: hidden;
+	padding: 32px 24px 40px;
+	box-sizing: border-box;
+	background: linear-gradient(180deg, #f8f3ea 0%, #f3ecdf 48%, #efe6d6 100%);
+	color: #201c17;
+}
+
+.addresses-page__glow {
+	position: absolute;
+	border-radius: 999px;
+	filter: blur(30px);
+	opacity: 0.82;
+	pointer-events: none;
+}
+
+.addresses-page__glow--top {
+	top: -108px;
+	right: -76px;
+	width: 280px;
+	height: 280px;
+	background: rgb(255 199 81 / 20%);
+}
+
+.addresses-page__glow--bottom {
+	left: -88px;
+	bottom: 48px;
+	width: 220px;
+	height: 220px;
+	background: rgb(172 123 61 / 12%);
+}
+
+.addresses-header,
+.address-card,
+.addresses-state-panel {
+	position: relative;
+	border: 1px solid rgb(101 71 32 / 10%);
+	border-radius: 30px;
+	background: linear-gradient(180deg, rgb(255 252 247 / 94%) 0%, rgb(255 248 239 / 88%) 100%);
+	box-shadow: 0 18px 42px rgb(92 67 35 / 8%);
+	backdrop-filter: blur(10px);
+}
+
+.addresses-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 24px;
+	margin-bottom: 24px;
+}
+
+.addresses-header__title {
+	font-size: 36px;
+	font-weight: 700;
+	color: #231d18;
+}
+
+.addresses-header__add {
+	flex-shrink: 0;
+	height: 72px;
+	line-height: 72px;
+	padding: 0 24px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, #ffca4c 0%, #f4b834 100%);
+	box-shadow: 0 12px 24px rgb(244 184 52 / 24%);
+	font-size: 24px;
+	font-weight: 700;
+	color: #33260d;
+}
+
+.addresses-header__add::after {
+	border: none;
+}
+
+.addresses-list,
+.address-skeleton-list {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+.address-card {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 22px;
+}
+
+.address-card__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.address-card__contact {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+
+.address-card__name {
+	font-size: 30px;
+	font-weight: 700;
+	color: #231d18;
+}
+
+.address-card__phone {
+	font-size: 24px;
+	color: #6d6257;
+}
+
+.address-card__badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 80px;
+	height: 44px;
+	padding: 0 16px;
+	border-radius: 999px;
+	background: rgb(225 242 227 / 96%);
+	font-size: 22px;
+	font-weight: 700;
+	color: #25633b;
+}
+
+.address-card__address {
+	padding: 16px 18px;
+	border-radius: 20px;
+	background: rgb(255 251 245 / 78%);
+	border: 1px solid rgb(101 71 32 / 8%);
+}
+
+.address-card__full-address {
+	font-size: 26px;
+	line-height: 1.6;
+	color: #231d18;
+	word-break: break-all;
+}
+
+.address-card__actions {
+	display: flex;
+	gap: 12px;
+}
+
+.address-card__action {
+	flex: 1;
+	height: 72px;
+	line-height: 72px;
+	border-radius: 20px;
+	font-size: 26px;
+	font-weight: 700;
+}
+
+.address-card__action--edit {
+	background: rgb(255 249 239 / 84%);
+	border: 1px solid rgb(101 71 32 / 10%);
+	box-shadow: 0 8px 16px rgb(92 67 35 / 8%);
+	color: #8e6423;
+}
+
+.address-card__action--edit::after {
+	border: none;
+}
+
+.address-card__action--delete {
+	background: rgb(255 239 236 / 84%);
+	border: 1px solid rgb(161 54 39 / 20%);
+	box-shadow: 0 8px 16px rgb(161 54 39 / 12%);
+	color: #a54d39;
+}
+
+.address-card__action--delete::after {
+	border: none;
+}
+
+.addresses-state-panel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	min-height: 360px;
+	padding: 36px 30px;
+	text-align: center;
+}
+
+.addresses-state-panel__title {
+	font-size: 34px;
+	font-weight: 700;
+	color: #231d18;
+}
+
+.addresses-state-panel__desc {
+	font-size: 24px;
+	line-height: 1.7;
+	color: #736759;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.addresses-state-panel__button {
+	min-width: 220px;
+	height: 84px;
+	line-height: 84px;
+	margin-top: 4px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, #ffca4c 0%, #f4b834 100%);
+	box-shadow: 0 16px 28px rgb(244 184 52 / 24%);
+	font-size: 28px;
+	font-weight: 700;
+	color: #33260d;
+}
+
+.addresses-state-panel__button::after {
+	border: none;
+}
+
+.address-card--skeleton {
+	animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line {
+	height: 24px;
+	border-radius: 999px;
+	background: linear-gradient(90deg, rgb(244 235 220 / 90%) 0%, rgb(255 248 239 / 100%) 50%, rgb(244 235 220 / 90%) 100%);
+	background-size: 200% 100%;
+	animation: shimmer 1.4s linear infinite;
+}
+
+.skeleton-line--title {
+	width: 72%;
+	height: 34px;
+}
+
+@keyframes shimmer {
+	from {
+		background-position: 200% 0;
+	}
+
+	to {
+		background-position: -200% 0;
+	}
+}
+
+@keyframes skeleton-pulse {
+	0%,
+	100% {
+		opacity: 0.92;
+	}
+
+	50% {
+		opacity: 1;
+	}
+}

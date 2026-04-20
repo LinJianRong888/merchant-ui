@@ -32,16 +32,39 @@ function ensureSuccessResponse (response, fallbackMessage, requestMeta) {
   throw error
 }
 
-export async function createSaleOrder ({ productId, quantity }) {
+export async function createSaleOrder ({ productId, quantity, address }) {
+  if (!address) {
+    throw new Error('地址参数必填')
+  }
+
   const response = await request.post('/api/v1/orders/', {
     order_type: ORDER_TYPE_SALE,
     product_id: productId,
-    quantity
+    quantity,
+    address
   })
 
   return ensureSuccessResponse(response, '创建订单失败', {
     url: '/api/v1/orders/',
     method: 'POST'
+  })
+}
+
+export async function createOrderPayment (orderId) {
+  const response = await request.post(`/api/v1/orders/${orderId}/pay/`)
+
+  return ensureSuccessResponse(response, '创建支付参数失败', {
+    url: `/api/v1/orders/${orderId}/pay/`,
+    method: 'POST'
+  })
+}
+
+export async function getOrderDetail (orderId) {
+  const response = await request.get(`/api/v1/orders/${orderId}/`)
+
+  return ensureSuccessResponse(response, '获取订单详情失败', {
+    url: `/api/v1/orders/${orderId}/`,
+    method: 'GET'
   })
 }
 

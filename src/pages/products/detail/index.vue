@@ -86,7 +86,6 @@
 import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 
-import { createSaleOrder } from '@/api/orders'
 import { getSaleProductDetail } from '@/api/products'
 
 import './index.scss'
@@ -180,42 +179,24 @@ export default {
       }
     }
 
+    async function handleSelectAddress () {
+      if (!product.value?.id || isSubmitting.value) {
+        return
+      }
+
+      isSubmitting.value = true
+
+      try {
+        await Taro.navigateTo({
+          url: `/pages/orders/address-select/index?productId=${product.value.id}&quantity=${quantity.value}`
+        })
+      } finally {
+        isSubmitting.value = false
+      }
+    }
+
     function handlePlaceOrder () {
-      return (async () => {
-        if (!product.value?.id || isSubmitting.value) {
-          return
-        }
-
-        isSubmitting.value = true
-
-        try {
-          const order = await createSaleOrder({
-            productId: product.value.id,
-            quantity: quantity.value
-          })
-
-          console.log('[product-detail] place order success', order)
-
-          await Taro.showModal({
-            title: '下单成功',
-            content: [
-              `订单号：${order.order_no || '未返回'}`,
-              `订单金额：¥${order.total_amount || '--'}`,
-              `状态：${order.status || 'pending'}`
-            ].join('\n'),
-            showCancel: false,
-            confirmText: '知道了'
-          })
-        } catch (error) {
-          console.error('[product-detail] place order failed', error)
-          Taro.showToast({
-            title: error?.message || '下单失败',
-            icon: 'none'
-          })
-        } finally {
-          isSubmitting.value = false
-        }
-      })()
+      void handleSelectAddress()
     }
 
     function handleDecreaseQuantity () {

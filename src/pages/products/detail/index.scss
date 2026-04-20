@@ -205,6 +205,11 @@
 	border: none;
 }
 
+.detail-order-button[disabled] {
+	opacity: 0.58;
+	box-shadow: none;
+}
+
 .detail-state-panel {
 	display: flex;
 	flex-direction: column;
@@ -275,6 +280,76 @@
 	font-weight: 700;
 	text-align: center;
 	color: #231d18;
+}
+
+.payment-state-card {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 22px 22px 24px;
+	border: 1px solid rgb(101 71 32 / 10%);
+	border-radius: 28px;
+	background: rgb(255 251 245 / 78%);
+	box-shadow: 0 14px 30px rgb(92 67 35 / 6%);
+}
+
+.payment-state-card__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.payment-state-card__label {
+	font-size: 22px;
+	font-weight: 700;
+	letter-spacing: 2px;
+	color: #a17235;
+}
+
+.payment-state-card__badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 128px;
+	height: 48px;
+	padding: 0 16px;
+	border-radius: 999px;
+	font-size: 22px;
+	font-weight: 700;
+}
+
+.payment-state-card__badge.is-pending_payment {
+	background: rgb(255 242 210 / 96%);
+	color: #946828;
+}
+
+.payment-state-card__badge.is-paying,
+.payment-state-card__badge.is-pending_confirm {
+	background: rgb(255 236 199 / 96%);
+	color: #9d6814;
+}
+
+.payment-state-card__badge.is-paid {
+	background: rgb(232 247 236 / 96%);
+	color: #246847;
+}
+
+.payment-state-card__badge.is-failed {
+	background: rgb(255 239 236 / 96%);
+	color: #a54d39;
+}
+
+.payment-state-card__desc {
+	font-size: 24px;
+	line-height: 1.7;
+	color: #5f5348;
+}
+
+.payment-state-card__meta {
+	font-size: 22px;
+	line-height: 1.6;
+	color: #8b7a65;
 }
 
 .detail-skeleton {

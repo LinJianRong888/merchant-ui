@@ -4,8 +4,14 @@
     <view class="products-page__glow products-page__glow--bottom"></view>
 
     <view class="products-page__header">
-      <text class="products-page__eyebrow">sale products</text>
-      <text class="products-page__title">商品</text>
+      <view class="products-page__header-main">
+        <view class="products-page__heading">
+          <text class="products-page__eyebrow">sale products</text>
+          <text class="products-page__title">商品</text>
+        </view>
+        <button class="products-page__orders-button" @tap="handleOpenOrders">订单</button>
+        <button class="products-page__user-button" @tap="handleOpenUser">我的</button>
+      </view>
     </view>
 
     <view v-if="isLoading" class="product-skeleton-list">
@@ -83,6 +89,8 @@ import './index.scss'
 
 const PRODUCTS_PAGE_PATH = '/pages/products/index'
 const PRODUCT_DETAIL_PAGE_PATH = '/pages/products/detail/index'
+const ORDERS_PAGE_PATH = '/pages/orders/index'
+const USER_PAGE_PATH = '/pages/user/index'
 const LOGIN_PAGE_PATH = '/pages/index/index'
 
 function formatPrice (price) {
@@ -190,6 +198,18 @@ export default {
       })
     }
 
+    async function handleOpenOrders () {
+      await Taro.navigateTo({
+        url: ORDERS_PAGE_PATH
+      })
+    }
+
+    async function handleOpenUser () {
+      await Taro.navigateTo({
+        url: USER_PAGE_PATH
+      })
+    }
+
     async function runNetworkProbe () {
       const accessToken = Taro.getStorageSync('access_token') || ''
       const url = `${API_BASE_URL}/api/v1/products/`
@@ -230,6 +250,8 @@ export default {
     }
 
     useDidShow(() => {
+      authStore.hydrate()
+
       console.info('[products-page] show', {
         isAuthenticated: authStore.isAuthenticated
       })
@@ -256,6 +278,8 @@ export default {
 
     return {
       errorMessage,
+      handleOpenOrders,
+      handleOpenUser,
       handleRetry,
       handleOpenDetail,
       isError,
