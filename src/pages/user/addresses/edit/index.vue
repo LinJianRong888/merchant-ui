@@ -8,22 +8,24 @@
         <view class="form-group">
           <label class="form-label">收货人</label>
           <input
-            v-model="form.contact_name"
+            :value="form.contact_name"
             class="form-input"
             type="text"
             placeholder="请输入收货人姓名"
             :disabled="isSubmitting"
+            @input="handleFieldInput('contact_name', $event.detail.value)"
           />
         </view>
 
         <view class="form-group">
           <label class="form-label">手机号</label>
           <input
-            v-model="form.contact_phone"
+            :value="form.contact_phone"
             class="form-input"
             type="text"
             placeholder="请输入手机号"
             :disabled="isSubmitting"
+            @input="handleFieldInput('contact_phone', $event.detail.value)"
           />
         </view>
       </view>
@@ -31,59 +33,34 @@
       <view class="form-section">
         <text class="form-section__title">所在地区</text>
 
-        <view class="form-group">
-          <label class="form-label">省份</label>
-          <input
-            v-model="form.province"
-            class="form-input"
-            type="text"
-            placeholder="如：广东省"
-            :disabled="isSubmitting"
-          />
-        </view>
-
-        <view class="form-group">
-          <label class="form-label">城市</label>
-          <input
-            v-model="form.city"
-            class="form-input"
-            type="text"
-            placeholder="如：广州市"
-            :disabled="isSubmitting"
-          />
-        </view>
-
-        <view class="form-group">
-          <label class="form-label">区县</label>
-          <input
-            v-model="form.district"
-            class="form-input"
-            type="text"
-            placeholder="如：天河区"
-            :disabled="isSubmitting"
-          />
-        </view>
+        <location-cascader
+          :model-value="form"
+          :disabled="isSubmitting"
+          @update:model-value="handleLocationChange"
+        />
       </view>
 
       <view class="form-section">
         <view class="form-group">
           <label class="form-label">详细地址</label>
           <textarea
-            v-model="form.address_detail"
+            :value="form.address_detail"
             class="form-textarea"
             placeholder="请输入详细地址，如街道名称、门号、楼层等"
             :disabled="isSubmitting"
+            @input="handleFieldInput('address_detail', $event.detail.value)"
           />
         </view>
 
         <view class="form-group">
           <label class="form-label">邮编</label>
           <input
-            v-model="form.postal_code"
+            :value="form.postal_code"
             class="form-input"
             type="text"
             placeholder="请输入邮编（可选）"
             :disabled="isSubmitting"
+            @input="handleFieldInput('postal_code', $event.detail.value)"
           />
         </view>
       </view>
@@ -92,11 +69,11 @@
         <view class="form-group form-group--checkbox">
           <view class="checkbox-wrapper">
             <label class="checkbox-label">
-              <input
-                v-model="form.is_default"
-                type="checkbox"
+              <switch
+                :checked="Boolean(form.is_default)"
                 class="checkbox-input"
                 :disabled="isSubmitting"
+                @change="handleDefaultChange"
               />
               <text class="checkbox-text">设为默认地址</text>
             </label>
@@ -117,6 +94,9 @@ import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 
 import { createUserAddress, getUserAddress, updateUserAddress } from '@/api/user-addresses'
+import { addressNamesToCodes, addressCodesToNames } from '@/utils/location'
+
+import LocationCascader from '@/components/LocationCascader'
 
 import './index.scss'
 
@@ -132,6 +112,9 @@ const DEFAULT_FORM = {
 }
 
 export default {
+  components: {
+    LocationCascader
+  },
   setup () {
     const form = ref({ ...DEFAULT_FORM })
     const addressId = ref(null)
@@ -139,6 +122,26 @@ export default {
     const isSubmitting = ref(false)
 
     const isEditing = computed(() => Boolean(addressId.value))
+
+    function patchForm (patch) {
+      Object.assign(form.value, patch)
+    }
+
+    function handleFieldInput (field, value) {
+      form.value[field] = value
+    }
+
+    function handleLocationChange (nextValue) {
+      patchForm({
+        province: nextValue?.province || '',
+        city: nextValue?.city || '',
+        district: nextValue?.district || ''
+      })
+    }
+
+    function handleDefaultChange (event) {
+      form.value.is_default = Boolean(event?.detail?.value)
+    }
 
     async function loadAddressDetail () {
       if (!addressId.value) {
@@ -149,16 +152,18 @@ export default {
 
       try {
         const address = await getUserAddress(addressId.value)
-        form.value = {
-          contact_name: address.contact_name || '',
-          contact_phone: address.contact_phone || '',
-          province: address.province || '',
-          city: address.city || '',
-          district: address.district || '',
-          address_detail: address.address_detail || '',
-          postal_code: address.postal_code || '',
-          is_default: address.is_default || false
-        }
+        const addressWithCodes = addressNamesToCodes(address)
+
+        patchForm({
+          contact_name: addressWithCodes.contact_name || '',
+          contact_phone: addressWithCodes.contact_phone || '',
+          province: addressWithCodes.province || '',
+          city: addressWithCodes.city || '',
+          district: addressWithCodes.district || '',
+          address_detail: addressWithCodes.address_detail || '',
+          postal_code: addressWithCodes.postal_code || '',
+          is_default: addressWithCodes.is_default || false
+        })
       } catch (error) {
         console.error('[address-edit] load detail failed', error)
         Taro.showToast({
@@ -216,14 +221,17 @@ export default {
       isSubmitting.value = true
 
       try {
+        // Convert codes back to names for API
+        const formWithNames = addressCodesToNames(form.value)
+
         if (isEditing.value) {
-          await updateUserAddress(addressId.value, form.value)
+          await updateUserAddress(addressId.value, formWithNames)
           Taro.showToast({
             title: '地址已更新',
             icon: 'success'
           })
         } else {
-          await createUserAddress(form.value)
+          await createUserAddress(formWithNames)
           Taro.showToast({
             title: '地址已保存',
             icon: 'success'
@@ -261,7 +269,10 @@ export default {
     return {
       addressId,
       form,
+      handleDefaultChange,
       handleCancel,
+      handleFieldInput,
+      handleLocationChange,
       handleSave,
       isEditing,
       isLoading,
