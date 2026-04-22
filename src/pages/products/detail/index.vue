@@ -1,7 +1,14 @@
 <template>
   <view class="product-detail-page">
-    <view class="product-detail-page__glow product-detail-page__glow--top"></view>
-    <view class="product-detail-page__glow product-detail-page__glow--bottom"></view>
+    <view class="nav-bar">
+      <view class="nav-back" @tap="goBack">
+        <text class="nav-back-icon">‹</text>
+      </view>
+      <text class="nav-title">商品详情</text>
+      <view class="nav-more">
+        <text class="nav-more-icon">⋯</text>
+      </view>
+    </view>
 
     <view v-if="isLoading" class="detail-skeleton">
       <view class="detail-skeleton__media"></view>
@@ -17,66 +24,55 @@
     </view>
 
     <view v-else-if="product" class="product-detail-shell">
-      <view class="product-detail-hero">
-        <image
-          v-if="product.coverImage"
-          class="product-detail-hero__image"
-          :src="product.coverImage"
-          mode="aspectFill"
-        />
-        <view v-else class="product-detail-hero__placeholder">
-          <text class="product-detail-hero__placeholder-text">{{ product.placeholderText }}</text>
+      <swiper class="product-swiper" :indicator-dots="true" :autoplay="false">
+        <swiper-item>
+          <view class="product-image"></view>
+        </swiper-item>
+      </swiper>
+
+      <view class="product-info">
+        <view class="product-price-row">
+          <text class="product-price">{{ product.displayPrice }}</text>
+          <text class="product-origin-price">¥{{ (product.price || 299) * 1.5 }}</text>
+        </view>
+        <view class="product-name-row">
+          <text class="product-name">{{ product.name }}</text>
+          <text class="product-index">1/5</text>
+        </view>
+        <text class="product-tag"> </text>
+      </view>
+
+      <view class="product-specs">
+        <text class="specs-title">图文详情</text>
+        <view class="spec-item">
+          <text class="spec-label">规格</text>
+          <text class="spec-value">{{ product.specification || '249g/盒' }}</text>
+        </view>
+        <view class="spec-item">
+          <text class="spec-label">产地</text>
+          <text class="spec-value">{{ product.packaging || '广东省广州市（以实际商品批次为准）' }}</text>
+        </view>
+        <view class="spec-item">
+          <text class="spec-label">产地</text>
+          <text class="spec-value">{{ product.shelf_life || '0-4度' }}</text>
         </view>
       </view>
 
-      <view class="product-detail-card">
-        <view class="product-detail-card__header">
-          <view class="product-detail-card__title-block">
-            <text class="product-detail-card__title">{{ product.name }}</text>
-            <text v-if="product.description" class="product-detail-card__desc">{{ product.description }}</text>
+      <view class="bottom-bar">
+        <view class="bottom-left">
+          <view class="bottom-btn" @tap="goHome">
+            <text class="bottom-btn-icon">🏠</text>
+            <text class="bottom-btn-text">首页</text>
           </view>
-          <text class="product-detail-card__price">{{ product.displayPrice }}</text>
-        </view>
-
-        <view class="detail-grid">
-          <view class="detail-grid__item">
-            <text class="detail-grid__label">净含量</text>
-            <text class="detail-grid__value">{{ product.net_content || '未填写' }}</text>
-          </view>
-          <view class="detail-grid__item">
-            <text class="detail-grid__label">规格</text>
-            <text class="detail-grid__value">{{ product.specification || '未填写' }}</text>
-          </view>
-          <view class="detail-grid__item">
-            <text class="detail-grid__label">包装</text>
-            <text class="detail-grid__value">{{ product.packaging || '未填写' }}</text>
-          </view>
-          <view class="detail-grid__item">
-            <text class="detail-grid__label">保质期</text>
-            <text class="detail-grid__value">{{ product.shelf_life || '未填写' }}</text>
-          </view>
-          <view class="detail-grid__item detail-grid__item--wide">
-            <text class="detail-grid__label">库存</text>
-            <text class="detail-grid__value">{{ product.displayStock }}</text>
+          <view class="bottom-btn" @tap="goCart">
+            <text class="bottom-btn-icon">🛒</text>
+            <text class="bottom-btn-text">购物车</text>
           </view>
         </view>
-
-        <view class="purchase-panel">
-          <text class="purchase-panel__label">下单数量</text>
-          <view class="purchase-stepper">
-            <button class="purchase-stepper__button" :disabled="isSubmitting || quantity <= 1" @tap="handleDecreaseQuantity">-</button>
-            <text class="purchase-stepper__value">{{ quantity }}</text>
-            <button class="purchase-stepper__button" :disabled="isSubmitting" @tap="handleIncreaseQuantity">+</button>
-          </view>
+        <view class="bottom-right">
+          <button class="btn-add-cart" @tap="addCart">加入购物车</button>
+          <button class="btn-buy-now" :loading="isSubmitting" @tap="handlePlaceOrder">立即购买</button>
         </view>
-      </view>
-
-      <view class="detail-footer">
-        <view class="detail-footer__summary">
-          <text class="detail-footer__summary-label">合计</text>
-          <text class="detail-footer__summary-value">{{ orderAmountText }}</text>
-        </view>
-        <button class="detail-order-button" :loading="isSubmitting" @tap="handlePlaceOrder">立即下单</button>
       </view>
     </view>
   </view>
@@ -207,6 +203,29 @@ export default {
       quantity.value = Math.min(99, quantity.value + 1)
     }
 
+    function goBack() {
+      Taro.navigateBack()
+    }
+
+    function goHome() {
+      Taro.switchTab({
+        url: '/pages/home/index'
+      })
+    }
+
+    function goCart() {
+      Taro.switchTab({
+        url: '/pages/cart/index'
+      })
+    }
+
+    function addCart() {
+      Taro.showToast({
+        title: '已加入购物车',
+        icon: 'success'
+      })
+    }
+
     useLoad((params) => {
       productId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
       void loadProductDetail()
@@ -232,7 +251,11 @@ export default {
       loadProductDetail,
       orderAmountText,
       product,
-      quantity
+      quantity,
+      goBack,
+      goHome,
+      goCart,
+      addCart
     }
   }
 }

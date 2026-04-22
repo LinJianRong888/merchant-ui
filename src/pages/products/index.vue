@@ -1,17 +1,7 @@
 <template>
   <view class="products-page">
-    <view class="products-page__glow products-page__glow--top"></view>
-    <view class="products-page__glow products-page__glow--bottom"></view>
-
-    <view class="products-page__header">
-      <view class="products-page__header-main">
-        <view class="products-page__heading">
-          <text class="products-page__eyebrow">sale products</text>
-          <text class="products-page__title">商品</text>
-        </view>
-        <button class="products-page__orders-button" @tap="handleOpenOrders">订单</button>
-        <button class="products-page__user-button" @tap="handleOpenUser">我的</button>
-      </view>
+    <view class="page-header">
+      <text class="page-title">商品分类</text>
     </view>
 
     <view v-if="isLoading" class="product-skeleton-list">
@@ -33,7 +23,7 @@
 
     <view v-else-if="!products.length" class="state-panel state-panel--empty">
       <text class="state-panel__title">暂无商品</text>
-      <text class="state-panel__desc">当前没有可售商品。</text>
+      <text class="state-panel__desc">当前没有可售商品</text>
     </view>
 
     <view v-else class="product-list">
@@ -69,7 +59,6 @@
           <view class="product-card__meta-row product-card__meta-row--secondary">
             <text v-if="product.shelf_life" class="product-meta">保质期 {{ product.shelf_life }}</text>
             <text class="product-meta">库存 {{ product.displayStock }}</text>
-            <text class="product-meta product-meta--link">查看详情</text>
           </view>
         </view>
       </view>
@@ -83,33 +72,25 @@ import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 
 import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
-import { API_BASE_URL } from '@/utils/request'
 
 import './index.scss'
 
-const PRODUCTS_PAGE_PATH = '/pages/products/index'
-const PRODUCT_DETAIL_PAGE_PATH = '/pages/products/detail/index'
-const ORDERS_PAGE_PATH = '/pages/orders/index'
-const USER_PAGE_PATH = '/pages/user/index'
-const LOGIN_PAGE_PATH = '/pages/index/index'
+const PRODUCT_DETAIL_PAGE = '/pages/products/detail/index'
+const LOGIN_PAGE = '/pages/index/index'
 
 function formatPrice (price) {
   const value = Number(price)
-
   if (Number.isFinite(value)) {
     return `¥${value.toFixed(2)}`
   }
-
   return '¥--'
 }
 
 function formatStock (stock) {
   const value = Number(stock)
-
   if (Number.isFinite(value)) {
     return String(value)
   }
-
   return '--'
 }
 
@@ -126,17 +107,10 @@ function normalizeProducts (items) {
 }
 
 function formatQueryError (error) {
-  const requestMeta = error?.request
   const lines = [error?.message || '请稍后重试']
-
-  if (requestMeta?.method && requestMeta?.url) {
-    lines.push(`${requestMeta.method.toUpperCase()} ${requestMeta.url}`)
+  if (error?.statusCode) {
+    lines.push(`status: ${error.statusCode}`)
   }
-
-  if (requestMeta?.timeout) {
-    lines.push(`timeout: ${requestMeta.timeout}ms`)
-  }
-
   return lines.join('\n')
 }
 
@@ -144,7 +118,6 @@ export default {
   setup () {
     const authStore = useAuthStore()
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
-    const hasRunProbe = ref(false)
     const products = ref([])
     const isLoading = ref(true)
     const isFetching = ref(false)
@@ -155,7 +128,7 @@ export default {
 
     async function navigateToLogin () {
       await Taro.redirectTo({
-        url: LOGIN_PAGE_PATH
+        url: LOGIN_PAGE
       })
     }
 
@@ -194,75 +167,13 @@ export default {
 
     async function handleOpenDetail (productId) {
       await Taro.navigateTo({
-        url: `${PRODUCT_DETAIL_PAGE_PATH}?id=${productId}`
+        url: `${PRODUCT_DETAIL_PAGE}?id=${productId}`
       })
-    }
-
-    async function handleOpenOrders () {
-      await Taro.navigateTo({
-        url: ORDERS_PAGE_PATH
-      })
-    }
-
-    async function handleOpenUser () {
-      await Taro.navigateTo({
-        url: USER_PAGE_PATH
-      })
-    }
-
-    async function runNetworkProbe () {
-      const accessToken = Taro.getStorageSync('access_token') || ''
-      const url = `${API_BASE_URL}/api/v1/products/`
-
-      console.log('[products-page] probe start', {
-        url,
-        mode: 'sale',
-        hasAuth: Boolean(accessToken),
-        tokenLength: accessToken.length
-      })
-
-      try {
-        const response = await Taro.request({
-          url,
-          method: 'GET',
-          data: {
-            mode: 'sale'
-          },
-          header: {
-            'Content-Type': 'application/json',
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-          },
-          timeout: 15000
-        })
-
-        console.log('[products-page] probe success', {
-          statusCode: response.statusCode,
-          data: response.data
-        })
-      } catch (error) {
-        console.error('[products-page] probe failed', {
-          message: error?.errMsg || error?.message || 'request failed',
-          url,
-          hasAuth: Boolean(accessToken),
-          tokenLength: accessToken.length
-        })
-      }
     }
 
     useDidShow(() => {
       authStore.hydrate()
-
-      console.info('[products-page] show', {
-        isAuthenticated: authStore.isAuthenticated
-      })
-
-      if (!hasRunProbe.value) {
-        hasRunProbe.value = true
-        void runNetworkProbe()
-      }
-
       void ensureAuthenticated()
-
       if (authStore.isAuthenticated) {
         void loadProducts()
       }
@@ -278,16 +189,13 @@ export default {
 
     return {
       errorMessage,
-      handleOpenOrders,
-      handleOpenUser,
       handleRetry,
       handleOpenDetail,
       isError,
       isFetching,
       isLoading,
       products,
-      skeletonItems,
-      productsPagePath: PRODUCTS_PAGE_PATH
+      skeletonItems
     }
   }
 }
