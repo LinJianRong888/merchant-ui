@@ -41,9 +41,28 @@
   margin-top: 16rpx;
 }
 
+.banner-swiper--empty {
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+
 .banner-image {
   width: 100%;
   height: 100%;
+  border-radius: 24rpx;
+  overflow: hidden;
+}
+
+.banner-image--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8ead3 0%, #efe2c3 100%);
+}
+
+.banner-image__text {
+  font-size: 30rpx;
+  color: #8a6a2f;
 }
 
 .category-section {
@@ -129,6 +148,19 @@
   width: 100%;
   height: 200rpx;
   border-radius: 12rpx;
+}
+
+.product-image--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f6ead4 0%, #f0dfc0 100%);
+}
+
+.product-image__text {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #8a6a2f;
 }
 
 .product-name {

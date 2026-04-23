@@ -7,11 +7,17 @@
       </view>
     </view>
 
-    <swiper class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500">
-      <swiper-item v-for="(item, index) in banners" :key="index">
-        <view class="banner-image"></view>
+    <swiper v-if="banners.length" class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500">
+      <swiper-item v-for="item in banners" :key="item.id">
+        <image class="banner-image" :src="item.image" mode="aspectFill" />
       </swiper-item>
     </swiper>
+
+    <view v-else class="banner-swiper banner-swiper--empty">
+      <view class="banner-image banner-image--empty">
+        <text class="banner-image__text">暂无轮播图片</text>
+      </view>
+    </view>
 
     <view class="category-section">
       <view class="category-list">
@@ -41,7 +47,10 @@
 
       <view v-else class="product-grid">
         <view class="product-card" v-for="(product, index) in hotProducts" :key="index" @tap="handleProductDetail(product.id)">
-          <view class="product-image"></view>
+          <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="aspectFill" />
+          <view v-else class="product-image product-image--empty">
+            <text class="product-image__text">{{ product.placeholderText }}</text>
+          </view>
           <text class="product-name">{{ product.name }}</text>
           <text class="product-price">{{ product.displayPrice }}</text>
         </view>
@@ -96,12 +105,6 @@ export default {
     const isLoading = ref(true)
     const isFetching = ref(false)
 
-    const banners = ref([
-      { image: '' },
-      { image: '' },
-      { image: '' }
-    ])
-
     const categories = ref([
       { name: '奶茶', icon: '' },
       { name: '制冰机', icon: '' },
@@ -109,6 +112,15 @@ export default {
       { name: '无2', icon: '' },
       { name: '无3', icon: '' }
     ])
+
+    const banners = computed(() => products.value
+      .filter((item) => item.coverImage)
+      .slice(0, 3)
+      .map((item) => ({
+        id: item.profile_id || item.id,
+        image: item.coverImage,
+        name: item.name
+      })))
 
     const hotProducts = computed(() => products.value.slice(0, 3))
 

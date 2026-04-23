@@ -26,7 +26,7 @@
   justify-content: center;
 }
 
-.avatar-btn {
+.avatar-shell {
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
@@ -39,16 +39,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
-  &::after {
-    border: none;
-  }
-}
-
-.avatar-img {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
 }
 
 .avatar-open-data {
@@ -95,75 +85,18 @@
   margin-bottom: 8rpx;
 }
 
-.nickname-input {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 8rpx;
-  padding: 0;
-  height: 50rpx;
-  line-height: 50rpx;
-  background: transparent;
-  border: none;
-  outline: none;
-}
-
 .nickname-display {
   display: flex;
   align-items: center;
   margin-bottom: 8rpx;
 }
 
-.nickname-text {
+.nickname-open-data {
   font-size: 36rpx;
   font-weight: bold;
   color: #333;
-}
-
-.edit-hint {
-  font-size: 28rpx;
-  color: #999;
-  margin-left: 8rpx;
-}
-
-.nickname-edit-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.nickname-edit-popup {
-  width: 560rpx;
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 48rpx 32rpx;
-}
-
-.nickname-edit-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 24rpx;
+  line-height: 1.2;
   display: block;
-  text-align: center;
-}
-
-.nickname-edit-input {
-  width: 100%;
-  height: 80rpx;
-  border: 2rpx solid #e0e0e0;
-  border-radius: 12rpx;
-  padding: 0 20rpx;
-  font-size: 30rpx;
-  color: #333;
-  box-sizing: border-box;
 }
 
 .user-phone {
@@ -305,7 +238,15 @@
   color: #333;
 }
 
+.menu-text--danger {
+  color: #d64545;
+}
+
 .menu-arrow {
   font-size: 32rpx;
   color: #ccc;
+}
+
+.menu-arrow--danger {
+  color: #e38a8a;
 }

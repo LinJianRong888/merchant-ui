@@ -3,7 +3,6 @@ export default defineAppConfig({
     'pages/home/index',
     'pages/products/index',
     'pages/products/detail/index',
-    'pages/cart/index',
     'pages/orders/index',
     'pages/orders/detail/index',
     'pages/orders/address-select/index',
@@ -31,10 +30,6 @@ export default defineAppConfig({
       {
         pagePath: 'pages/products/index',
         text: '分类'
-      },
-      {
-        pagePath: 'pages/cart/index',
-        text: '购物车'
       },
       {
         pagePath: 'pages/user/index',

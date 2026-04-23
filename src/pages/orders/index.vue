@@ -39,14 +39,14 @@
       <button class="orders-state-panel__button" :loading="isFetching" @tap="handleRetry">重新加载</button>
     </view>
 
-    <view v-else-if="!orders.length" class="orders-state-panel orders-state-panel--empty">
+    <view v-else-if="!filteredOrders.length" class="orders-state-panel orders-state-panel--empty">
       <text class="orders-state-panel__title">还没有订单</text>
       <text class="orders-state-panel__desc">完成一次下单后，这里会展示订单号和支付状态。</text>
     </view>
 
     <view v-else class="orders-list">
       <view
-        v-for="order in orders"
+        v-for="order in filteredOrders"
         :key="order.id || order.order_no"
         class="order-card"
         @tap="handleOpenDetail(order)"
@@ -82,7 +82,7 @@
 
 <script>
 import { computed, ref } from 'vue'
-import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
+import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 
 import { createOrderPayment, listOrders } from '@/api/orders'
 import { useAuthStore } from '@/stores/auth'
@@ -93,6 +93,14 @@ const LOGIN_PAGE_PATH = '/pages/index/index'
 const ORDER_DETAIL_PAGE_PATH = '/pages/orders/detail/index'
 const PAYMENT_POLL_INTERVAL = 1500
 const PAYMENT_POLL_MAX_ATTEMPTS = 4
+
+function normalizeOrderFilter (value) {
+  if (['pending', 'paid', 'shipped', 'completed'].includes(value)) {
+    return value
+  }
+
+  return 'all'
+}
 
 function sleep (delay) {
   return new Promise((resolve) => {
@@ -205,6 +213,7 @@ export default {
     const authStore = useAuthStore()
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
     const orders = ref([])
+    const activeFilter = ref('all')
     const isLoading = ref(true)
     const isFetching = ref(false)
     const loadError = ref(null)
@@ -212,6 +221,13 @@ export default {
 
     const isError = computed(() => Boolean(loadError.value))
     const errorMessage = computed(() => formatQueryError(loadError.value))
+    const filteredOrders = computed(() => {
+      if (activeFilter.value === 'all') {
+        return orders.value
+      }
+
+      return orders.value.filter((item) => item.status === activeFilter.value)
+    })
     const totalCountText = computed(() => String(orders.value.length))
     const pendingCountText = computed(() => String(orders.value.filter((item) => item.status === 'pending').length))
     const paidCountText = computed(() => String(orders.value.filter((item) => item.status === 'paid').length))
@@ -321,6 +337,10 @@ export default {
       })()
     }
 
+    useLoad((params) => {
+      activeFilter.value = normalizeOrderFilter(params?.tab)
+    })
+
     useDidShow(() => {
       authStore.hydrate()
 
@@ -346,6 +366,7 @@ export default {
       handleOpenDetail,
       handlePayOrder,
       handleRetry,
+      filteredOrders,
       isError,
       isFetching,
       isLoading,

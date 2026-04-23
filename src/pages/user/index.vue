@@ -2,31 +2,15 @@
   <view class="user-page">
     <view class="user-header">
       <view class="user-info">
-        <button
-          v-if="isLoggedIn"
-          class="avatar-btn"
-          open-type="chooseAvatar"
-          @chooseavatar="onChooseAvatar"
-        >
-          <image v-if="userInfo.avatarUrl" class="avatar-img" :src="userInfo.avatarUrl" mode="aspectFill" />
-          <open-data v-else type="userAvatarUrl" class="avatar-open-data" />
-        </button>
+        <view v-if="isLoggedIn" class="avatar-shell">
+          <open-data type="userAvatarUrl" class="avatar-open-data" />
+        </view>
         <view v-else class="user-avatar" @tap="handleUserTap"></view>
         <view class="user-detail">
           <template v-if="isLoggedIn">
-            <view v-if="userInfo.nickName" class="nickname-display" @tap="startEditNickname">
-              <text class="nickname-text">{{ userInfo.nickName }}</text>
-              <text class="edit-hint">✎</text>
+            <view class="nickname-display">
+              <open-data type="userNickName" class="nickname-open-data" />
             </view>
-            <input
-              v-else
-              class="nickname-input"
-              type="nickname"
-              :value="userInfo.nickName"
-              placeholder="点击设置昵称"
-              @blur="onNicknameBlur"
-              @confirm="onNicknameBlur"
-            />
           </template>
           <text v-else class="user-name-blank" @tap="handleUserTap"> </text>
           <text v-if="isLoggedIn && displayPhone" class="user-phone">{{ displayPhone }}</text>
@@ -111,46 +95,34 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-    </view>
-
-    <view v-if="isEditingNickname" class="nickname-edit-mask" @tap="cancelEditNickname">
-      <view class="nickname-edit-popup" @tap.stop>
-        <text class="nickname-edit-title">修改昵称</text>
-        <input
-          class="nickname-edit-input"
-          type="nickname"
-          :value="userInfo.nickName"
-          placeholder="请输入昵称"
-          :focus="isEditingNickname"
-          @blur="onNicknameEditBlur"
-          @confirm="onNicknameEditConfirm"
-        />
+      <view v-if="isLoggedIn" class="menu-item" @tap="handleLogout">
+        <view class="menu-left">
+          <text class="menu-icon">↩</text>
+          <text class="menu-text menu-text--danger">退出登录</text>
+        </view>
+        <text class="menu-arrow menu-arrow--danger">›</text>
       </view>
     </view>
+
   </view>
 </template>
 
 <script>
 import Taro, { useDidShow } from '@tarojs/taro'
-import { computed, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { listOrders } from '@/api/orders'
 import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
 import './index.scss'
 
 const ADDRESSES_PAGE = '/pages/user/addresses/index'
-const CART_PAGE = '/pages/cart/index'
+const ORDERS_PAGE = '/pages/orders/index'
 const LOGIN_PAGE = '/pages/index/index'
 
 export default {
   setup() {
     const authStore = useAuthStore()
     const orders = ref([])
-    const isEditingNickname = ref(false)
-    const userInfo = reactive({
-      nickName: '',
-      avatarUrl: ''
-    })
 
     const isLoggedIn = computed(() => authStore.isAuthenticated)
 
@@ -173,67 +145,6 @@ export default {
       } catch (e) {
         orders.value = []
       }
-    }
-
-    function loadLocalUserInfo() {
-      try {
-        const saved = Taro.getStorageSync('wx_user_info')
-        if (saved) {
-          if (saved.nickName) userInfo.nickName = saved.nickName
-          if (saved.avatarUrl) userInfo.avatarUrl = saved.avatarUrl
-        }
-      } catch (e) {}
-    }
-
-    function saveLocalUserInfo() {
-      try {
-        Taro.setStorageSync('wx_user_info', {
-          nickName: userInfo.nickName,
-          avatarUrl: userInfo.avatarUrl
-        })
-      } catch (e) {}
-    }
-
-    function onChooseAvatar(e) {
-      const avatarUrl = e.detail.avatarUrl
-      if (avatarUrl) {
-        userInfo.avatarUrl = avatarUrl
-        saveLocalUserInfo()
-      }
-    }
-
-    function onNicknameBlur(e) {
-      const nickName = e.detail.value
-      if (nickName && nickName.trim()) {
-        userInfo.nickName = nickName.trim()
-        saveLocalUserInfo()
-      }
-    }
-
-    function startEditNickname() {
-      isEditingNickname.value = true
-    }
-
-    function cancelEditNickname() {
-      isEditingNickname.value = false
-    }
-
-    function onNicknameEditBlur(e) {
-      const nickName = e.detail.value
-      if (nickName && nickName.trim()) {
-        userInfo.nickName = nickName.trim()
-        saveLocalUserInfo()
-      }
-      isEditingNickname.value = false
-    }
-
-    function onNicknameEditConfirm(e) {
-      const nickName = e.detail.value
-      if (nickName && nickName.trim()) {
-        userInfo.nickName = nickName.trim()
-        saveLocalUserInfo()
-      }
-      isEditingNickname.value = false
     }
 
     async function onGetPhoneNumber(e) {
@@ -270,9 +181,6 @@ export default {
     useDidShow(() => {
       authStore.hydrate()
       void loadOrders()
-      if (authStore.isAuthenticated) {
-        loadLocalUserInfo()
-      }
     })
 
     function goToAddresses() {
@@ -282,10 +190,26 @@ export default {
     }
 
     function goToOrders(tab) {
-      Taro.switchTab({
-        url: CART_PAGE,
-        success() {
-          Taro.eventCenter.trigger('switchCartTab', tab || 'all')
+      Taro.navigateTo({
+        url: `${ORDERS_PAGE}?tab=${tab || 'all'}`
+      })
+    }
+
+    function handleLogout() {
+      Taro.showModal({
+        title: '退出登录',
+        content: '确认退出当前账号吗？',
+        success: (result) => {
+          if (!result.confirm) {
+            return
+          }
+
+          authStore.clearSession()
+          orders.value = []
+
+          void Taro.reLaunch({
+            url: LOGIN_PAGE
+          })
         }
       })
     }
@@ -299,24 +223,17 @@ export default {
 
     return {
       authStore,
-      userInfo,
       isLoggedIn,
-      isEditingNickname,
       displayPhone,
       pendingCount,
       shippedCount,
       receivedCount,
       reviewedCount,
       handleUserTap,
-      onChooseAvatar,
-      onNicknameBlur,
-      startEditNickname,
-      cancelEditNickname,
-      onNicknameEditBlur,
-      onNicknameEditConfirm,
       onGetPhoneNumber,
       goToAddresses,
       goToOrders,
+      handleLogout,
       showComingSoon
     }
   }

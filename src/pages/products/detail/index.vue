@@ -26,7 +26,10 @@
     <view v-else-if="product" class="product-detail-shell">
       <swiper class="product-swiper" :indicator-dots="true" :autoplay="false">
         <swiper-item>
-          <view class="product-image"></view>
+          <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="aspectFill" />
+          <view v-else class="product-image product-image--empty">
+            <text class="product-image__text">{{ product.placeholderText }}</text>
+          </view>
         </swiper-item>
       </swiper>
 
@@ -37,7 +40,7 @@
         </view>
         <view class="product-name-row">
           <text class="product-name">{{ product.name }}</text>
-          <text class="product-index">1/5</text>
+          <text class="product-index">1/1</text>
         </view>
         <text class="product-tag"> </text>
       </view>
@@ -64,13 +67,8 @@
             <text class="bottom-btn-icon">🏠</text>
             <text class="bottom-btn-text">首页</text>
           </view>
-          <view class="bottom-btn" @tap="goCart">
-            <text class="bottom-btn-icon">🛒</text>
-            <text class="bottom-btn-text">购物车</text>
-          </view>
         </view>
         <view class="bottom-right">
-          <button class="btn-add-cart" @tap="addCart">加入购物车</button>
           <button class="btn-buy-now" :loading="isSubmitting" @tap="handlePlaceOrder">立即购买</button>
         </view>
       </view>
@@ -213,19 +211,6 @@ export default {
       })
     }
 
-    function goCart() {
-      Taro.switchTab({
-        url: '/pages/cart/index'
-      })
-    }
-
-    function addCart() {
-      Taro.showToast({
-        title: '已加入购物车',
-        icon: 'success'
-      })
-    }
-
     useLoad((params) => {
       productId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
       void loadProductDetail()
@@ -253,9 +238,7 @@ export default {
       product,
       quantity,
       goBack,
-      goHome,
-      goCart,
-      addCart
+      goHome
     }
   }
 }

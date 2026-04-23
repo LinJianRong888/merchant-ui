@@ -59,7 +59,7 @@ export default {
       isRedirecting.value = true
 
       try {
-        await Taro.redirectTo({
+        await Taro.switchTab({
           url: PRODUCTS_PAGE_PATH
         })
       } finally {
