@@ -1,8 +1,5 @@
 <template>
   <view class="address-edit-page">
-    <view class="address-edit-page__glow address-edit-page__glow--top"></view>
-    <view class="address-edit-page__glow address-edit-page__glow--bottom"></view>
-
     <view class="edit-form">
       <view class="form-section">
         <view class="form-group">

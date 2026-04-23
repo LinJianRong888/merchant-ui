@@ -4,7 +4,7 @@
 	overflow: hidden;
 	padding: 28px 24px 140px;
 	box-sizing: border-box;
-	background: linear-gradient(180deg, #f8f3ea 0%, #f3ecdf 48%, #efe6d6 100%);
+	background: #fff;
 	color: #201c17;
 }
 
@@ -44,11 +44,10 @@
 .detail-state-panel,
 .detail-skeleton {
 	position: relative;
-	border: 1px solid rgb(101 71 32 / 10%);
+	border: 1px solid #fff;
 	border-radius: 30px;
-	background: linear-gradient(180deg, rgb(255 252 247 / 94%) 0%, rgb(255 248 239 / 88%) 100%);
-	box-shadow: 0 18px 42px rgb(92 67 35 / 8%);
-	backdrop-filter: blur(10px);
+	background: #fff;
+	box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
 }
 
 .detail-status-card {
@@ -155,8 +154,8 @@
 	gap: 10px;
 	padding: 18px;
 	border-radius: 24px;
-	background: rgb(255 255 255 / 58%);
-	border: 1px solid rgb(101 71 32 / 8%);
+	background: #f9fafb;
+	border: 1px solid #fff;
 }
 
 .detail-item__header {
@@ -178,7 +177,7 @@
 	flex-shrink: 0;
 	font-size: 24px;
 	font-weight: 700;
-	color: #af6d14;
+	color: #f59e0b;
 }
 
 .detail-item__meta-row {
@@ -206,8 +205,8 @@
 	gap: 14px;
 	padding: 14px 18px;
 	border-radius: 22px;
-	background: rgb(255 255 255 / 58%);
-	border: 1px solid rgb(101 71 32 / 8%);
+	background: #f9fafb;
+	border: 1px solid #fff;
 }
 
 .detail-amounts__label {
@@ -234,8 +233,8 @@
 	gap: 10px;
 	padding: 18px;
 	border-radius: 24px;
-	background: rgb(255 255 255 / 58%);
-	border: 1px solid rgb(101 71 32 / 8%);
+	background: #f9fafb;
+	border: 1px solid #fff;
 }
 
 .detail-address__contact {
@@ -252,7 +251,7 @@
 
 .detail-address__phone {
 	font-size: 24px;
-	color: #8e6423;
+	color: #f59e0b;
 }
 
 .detail-address__full {
@@ -269,7 +268,7 @@
 	z-index: 10;
 	padding: 16px 24px;
 	padding-bottom: calc(16px + env(safe-area-inset-bottom));
-	background: linear-gradient(180deg, rgb(243 236 223 / 0%) 0%, #f3ecdf 24%);
+	background: #fff;
 }
 
 .detail-pay-button {

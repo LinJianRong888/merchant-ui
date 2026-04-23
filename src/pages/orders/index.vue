@@ -1,27 +1,13 @@
 <template>
   <view class="orders-page">
-    <view class="orders-page__glow orders-page__glow--top"></view>
-    <view class="orders-page__glow orders-page__glow--bottom"></view>
-
-    <view class="orders-page__header">
-      <view class="orders-page__heading">
-        <text class="orders-page__eyebrow">order ledger</text>
-        <text class="orders-page__title">订单管理</text>
-      </view>
-
-      <view class="orders-stats">
-        <view class="orders-stats__item">
-          <text class="orders-stats__label">总订单</text>
-          <text class="orders-stats__value">{{ totalCountText }}</text>
-        </view>
-        <view class="orders-stats__item">
-          <text class="orders-stats__label">待支付</text>
-          <text class="orders-stats__value">{{ pendingCountText }}</text>
-        </view>
-        <view class="orders-stats__item">
-          <text class="orders-stats__label">已支付</text>
-          <text class="orders-stats__value">{{ paidCountText }}</text>
-        </view>
+    <view class="tabs-container">
+      <view
+        v-for="tab in tabs"
+        :key="tab.value"
+        :class="['tab-item', { active: activeFilter === tab.value }]"
+        @tap="handleTabChange(tab.value)"
+      >
+        {{ tab.label }}
       </view>
     </view>
 
@@ -51,29 +37,41 @@
         class="order-card"
         @tap="handleOpenDetail(order)"
       >
-        <view class="order-card__topline">
-          <view class="order-card__meta-block">
-            <text class="order-card__order-no">{{ order.orderNoText }}</text>
-            <text class="order-card__time">{{ order.createdAtText }}</text>
-          </view>
-          <text :class="['order-card__badge', order.statusClass]">{{ order.statusLabel }}</text>
+        <view class="order-header">
+          <text class="order-no">订单编号：{{ order.orderNoText }}</text>
+          <text :class="['order-status', order.statusClass]">{{ order.statusLabel }}</text>
         </view>
 
-        <view class="order-items">
-          <view v-for="(item, itemIndex) in order.items" :key="`${order.id}-${itemIndex}`" class="order-item">
-            <text class="order-item__name">{{ item.product_name || '商品' }}</text>
-            <text class="order-item__qty">x{{ item.quantity || 0 }}</text>
+        <view class="order-products">
+          <view v-for="(item, itemIndex) in order.items" :key="`${order.id}-${itemIndex}`" class="product-item">
+            <view class="product-image">
+              <text v-if="!item.image" class="product-placeholder">📷</text>
+              <image v-else :src="item.image" class="product-img" mode="aspectFill" />
+            </view>
+            <view class="product-info">
+              <text class="product-name">{{ item.product_name || '商品' }}</text>
+              <text class="product-desc">{{ item.description || '' }}</text>
+              <view class="product-bottom">
+                <text class="product-price">¥{{ (item.price || 0).toFixed(2) }}</text>
+                <text class="product-quantity">x{{ item.quantity || 1 }}</text>
+              </view>
+            </view>
           </view>
         </view>
 
-        <view class="order-card__footer">
-          <text class="order-card__amount">{{ order.totalAmountText }}</text>
-          <button
-            v-if="order.canPay"
-            class="order-card__action"
-            :loading="payingOrderId === order.id"
-            @tap.stop="handlePayOrder(order)"
-          >继续支付</button>
+        <view class="order-footer">
+          <view class="order-total">
+            <text class="total-label">应付金额：</text>
+            <text class="total-price">{{ order.totalAmountText }}</text>
+          </view>
+          <view class="order-actions" @tap.stop>
+            <button v-if="order.canPay" class="action-btn action-btn--cancel" @tap="handleCancelOrder(order)">取消订单</button>
+            <button v-if="order.canPay" class="action-btn action-btn--pay" :loading="payingOrderId === order.id" @tap="handlePayOrder(order)">去支付</button>
+          </view>
+        </view>
+
+        <view v-if="order.canPay" class="countdown-tip">
+          14:10后自动取消
         </view>
       </view>
     </view>
@@ -219,6 +217,14 @@ export default {
     const loadError = ref(null)
     const payingOrderId = ref(null)
 
+    const tabs = [
+      { label: '全部', value: 'all' },
+      { label: '待付款', value: 'pending' },
+      { label: '待发货', value: 'paid' },
+      { label: '待收货', value: 'shipped' },
+      { label: '待评价', value: 'completed' }
+    ]
+
     const isError = computed(() => Boolean(loadError.value))
     const errorMessage = computed(() => formatQueryError(loadError.value))
     const filteredOrders = computed(() => {
@@ -228,9 +234,25 @@ export default {
 
       return orders.value.filter((item) => item.status === activeFilter.value)
     })
-    const totalCountText = computed(() => String(orders.value.length))
-    const pendingCountText = computed(() => String(orders.value.filter((item) => item.status === 'pending').length))
-    const paidCountText = computed(() => String(orders.value.filter((item) => item.status === 'paid').length))
+
+    function handleTabChange (tabValue) {
+      activeFilter.value = tabValue
+    }
+
+    function handleCancelOrder (order) {
+      Taro.showModal({
+        title: '提示',
+        content: '确定取消该订单吗？',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.showToast({
+              title: '订单已取消',
+              icon: 'none'
+            })
+          }
+        }
+      })
+    }
 
     async function navigateToLogin () {
       await Taro.redirectTo({
@@ -371,11 +393,12 @@ export default {
       isFetching,
       isLoading,
       orders,
-      paidCountText,
       payingOrderId,
-      pendingCountText,
       skeletonItems,
-      totalCountText
+      tabs,
+      activeFilter,
+      handleTabChange,
+      handleCancelOrder
     }
   }
 }

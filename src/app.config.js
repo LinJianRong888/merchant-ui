@@ -14,7 +14,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#fff',
-    navigationBarTitleText: '生鲜商城',
+    navigationBarTitleText: '商城',
     navigationBarTextStyle: 'black'
   },
   tabBar: {
@@ -25,15 +25,21 @@ export default defineAppConfig({
     list: [
       {
         pagePath: 'pages/home/index',
-        text: '首页'
+        text: '首页',
+        iconPath: 'assets/home.png',
+        selectedIconPath: 'assets/home-active.png'
       },
       {
         pagePath: 'pages/products/index',
-        text: '分类'
+        text: '商品',
+        iconPath: 'assets/products.png',
+        selectedIconPath: 'assets/products-active.png'
       },
       {
         pagePath: 'pages/user/index',
-        text: '我的'
+        text: '我的',
+        iconPath: 'assets/user.png',
+        selectedIconPath: 'assets/user-active.png'
       }
     ]
   }

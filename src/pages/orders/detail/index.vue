@@ -1,8 +1,5 @@
 <template>
   <view class="order-detail-page">
-    <view class="order-detail-page__glow order-detail-page__glow--top"></view>
-    <view class="order-detail-page__glow order-detail-page__glow--bottom"></view>
-
     <view v-if="isLoading" class="detail-skeleton">
       <view class="skeleton-line skeleton-line--title"></view>
       <view class="skeleton-line"></view>

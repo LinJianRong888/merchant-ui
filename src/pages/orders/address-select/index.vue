@@ -1,8 +1,5 @@
 <template>
   <view class="address-select-page">
-    <view class="address-select-page__glow address-select-page__glow--top"></view>
-    <view class="address-select-page__glow address-select-page__glow--bottom"></view>
-
     <view v-if="isLoading" class="address-skeleton-list">
       <view v-for="item in skeletonItems" :key="item" class="address-card address-card--skeleton">
         <view class="skeleton-line skeleton-line--title"></view>

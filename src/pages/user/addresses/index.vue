@@ -1,8 +1,5 @@
 <template>
   <view class="addresses-page">
-    <view class="addresses-page__glow addresses-page__glow--top"></view>
-    <view class="addresses-page__glow addresses-page__glow--bottom"></view>
-
     <view class="addresses-header">
       <text class="addresses-header__title">收货地址</text>
       <button class="addresses-header__add" @tap="handleAddAddress">+ 新增地址</button>

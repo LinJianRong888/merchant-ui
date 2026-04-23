@@ -1,23 +1,6 @@
 <template>
   <view class="login-page">
-    <view class="login-page__glow login-page__glow--top"></view>
-    <view class="login-page__glow login-page__glow--bottom"></view>
-
     <view class="login-shell">
-      <view class="symbol-stage" aria-hidden="true">
-        <view class="symbol-ring symbol-ring--large"></view>
-        <view class="symbol-ring symbol-ring--small"></view>
-        <view class="symbol-core">
-          <view class="symbol-core__dot"></view>
-        </view>
-      </view>
-
-      <view class="rhythm-bars" aria-hidden="true">
-        <view class="rhythm-bars__item"></view>
-        <view class="rhythm-bars__item"></view>
-        <view class="rhythm-bars__item"></view>
-      </view>
-
       <button class="login-button" :loading="isSubmitting" @tap="handleWechatLogin">
         {{ primaryButtonText }}
       </button>

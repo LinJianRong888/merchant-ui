@@ -1,5 +1,5 @@
 export default definePageConfig({
-  navigationBarTitleText: '订单管理',
+  navigationBarTitleText: '全部订单',
   enablePullDownRefresh: true,
   backgroundTextStyle: 'dark'
 })

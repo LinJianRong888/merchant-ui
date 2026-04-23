@@ -19,15 +19,6 @@
       </view>
     </view>
 
-    <view class="category-section">
-      <view class="category-list">
-        <view class="category-item" v-for="(item, index) in categories" :key="index" @tap="handleCategoryTap(item)">
-          <view class="category-icon"></view>
-          <text class="category-name">{{ item.name }}</text>
-        </view>
-      </view>
-    </view>
-
     <view class="hot-section">
       <view class="section-header">
         <text class="section-title">热卖商品</text>
@@ -105,14 +96,6 @@ export default {
     const isLoading = ref(true)
     const isFetching = ref(false)
 
-    const categories = ref([
-      { name: '奶茶', icon: '' },
-      { name: '制冰机', icon: '' },
-      { name: '无1', icon: '' },
-      { name: '无2', icon: '' },
-      { name: '无3', icon: '' }
-    ])
-
     const banners = computed(() => products.value
       .filter((item) => item.coverImage)
       .slice(0, 3)
@@ -158,13 +141,6 @@ export default {
       }
     }
 
-    function handleCategoryTap(category) {
-      Taro.showToast({
-        title: `进入${category.name}分类`,
-        icon: 'none'
-      })
-    }
-
     function handleProductDetail(productId) {
       Taro.navigateTo({
         url: `${PRODUCT_DETAIL_PAGE}?id=${productId}`
@@ -195,10 +171,8 @@ export default {
 
     return {
       banners,
-      categories,
       hotProducts,
       isLoading,
-      handleCategoryTap,
       handleProductDetail,
       handleMoreProducts
     }

@@ -1,7 +1,7 @@
 <template>
   <view class="products-page">
     <view class="page-header">
-      <text class="page-title">商品分类</text>
+      <text class="page-title">商品</text>
     </view>
 
     <view v-if="isLoading" class="product-skeleton-list">
