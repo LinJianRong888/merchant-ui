@@ -114,7 +114,7 @@
 .checkbox-label {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 80px;
 	cursor: pointer;
 }
 
@@ -122,6 +122,8 @@
 	width: 24px;
 	height: 24px;
 	cursor: pointer;
+	margin-top: -45px;
+	margin-left: 450px;
 }
 
 .checkbox-text {
@@ -153,7 +155,7 @@
 }
 
 .edit-footer__button--cancel {
-	background: rgb(244 235 220 / 84%);
+	background: #fff;
 	color: #8e6423;
 	border: 1px solid #fff;
 	box-shadow: 0 8px 16px rgb(92 67 35 / 8%);
@@ -164,7 +166,7 @@
 }
 
 .edit-footer__button--save {
-	background: linear-gradient(135deg, #ffca4c 0%, #f4b834 100%);
+	background: #fff;
 	color: #33260d;
 	box-shadow: 0 12px 28px rgb(244 184 52 / 28%);
 }

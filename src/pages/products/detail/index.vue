@@ -64,7 +64,7 @@
       <view class="bottom-bar">
         <view class="bottom-left">
           <view class="bottom-btn" @tap="goHome">
-            <text class="bottom-btn-icon">🏠</text>
+            <image class="bottom-btn-icon" :src="homeIcon" mode="aspectFit" />
             <text class="bottom-btn-text">首页</text>
           </view>
         </view>
@@ -81,6 +81,7 @@ import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 
 import { getSaleProductDetail } from '@/api/products'
+import homeIcon from '@/assets/home.png'
 
 import './index.scss'
 
@@ -238,7 +239,8 @@ export default {
       product,
       quantity,
       goBack,
-      goHome
+      goHome,
+      homeIcon
     }
   }
 }

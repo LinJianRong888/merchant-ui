@@ -190,7 +190,8 @@
 }
 
 .bottom-btn-icon {
-  font-size: 36rpx;
+  width: 40rpx;
+  height: 40rpx;
 }
 
 .bottom-btn-text {
@@ -209,11 +210,13 @@
   min-width: 280rpx;
   height: 80rpx;
   line-height: 80rpx;
-  background: linear-gradient(135deg, #ffca4c 0%, #f4b834 100%);
-  color: #333;
+  background: #fdfdfd;
+  color: #334;
   font-size: 28rpx;
   font-weight: bold;
   border-radius: 40rpx;
+  border: 2rpx solid #0f0f0f;
+  margin-left: 320rpx;
 }
 
 .btn-buy-now::after {
