@@ -156,9 +156,9 @@
 
 .edit-footer__button--cancel {
 	background: #fff;
-	color: #8e6423;
+	color: #0a0a0a;
 	border: 1px solid #fff;
-	box-shadow: 0 8px 16px rgb(92 67 35 / 8%);
+	box-shadow: 0 8px 16px rgba(15, 15, 15, 0.08);
 }
 
 .edit-footer__button--cancel::after {
@@ -168,7 +168,7 @@
 .edit-footer__button--save {
 	background: #fff;
 	color: #33260d;
-	box-shadow: 0 12px 28px rgb(244 184 52 / 28%);
+	
 }
 
 .edit-footer__button--save::after {

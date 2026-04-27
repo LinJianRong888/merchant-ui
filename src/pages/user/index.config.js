@@ -1,5 +1,5 @@
 export default definePageConfig({
-  navigationBarTitleText: '我的',
+  navigationBarTitleText: '',
   enablePullDownRefresh: false,
   backgroundTextStyle: 'dark'
 })

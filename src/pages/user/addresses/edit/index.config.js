@@ -1,5 +1,5 @@
 export default definePageConfig({
-  navigationBarTitleText: '地址编辑',
+  navigationBarTitleText: '',
   enablePullDownRefresh: false,
   backgroundTextStyle: 'dark'
 })

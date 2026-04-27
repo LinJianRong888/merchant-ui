@@ -1,5 +1,6 @@
 export default definePageConfig({
-  navigationBarTitleText: '商品详情',
+  navigationBarTitleText: '',
+  navigationStyle: 'custom',
   enablePullDownRefresh: true,
   backgroundTextStyle: 'dark'
 })

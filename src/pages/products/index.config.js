@@ -1,5 +1,5 @@
 export default definePageConfig({
-  navigationBarTitleText: '商品',
+  navigationBarTitleText: '',
   enablePullDownRefresh: true,
   backgroundTextStyle: 'dark'
 })

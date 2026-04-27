@@ -23,7 +23,7 @@
 	right: -72px;
 	width: 280px;
 	height: 280px;
-	background: rgb(255 198 74 / 28%);
+	background: rgba(7, 7, 7, 0.28);
 }
 
 .login-page__glow--bottom {
@@ -31,19 +31,19 @@
 	bottom: 128px;
 	width: 240px;
 	height: 240px;
-	background: rgb(205 140 73 / 16%);
+	background: rgba(253, 253, 253, 0.16);
 }
 
 .login-shell {
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
+	justify-content: flex-end;
 	align-items: center;
 	width: 100%;
 	min-height: 72vh;
 	gap: 32px;
-	padding: 36px 28px 32px;
+	padding: 36px 28px 120px 28px;
 	border: 1px solid #fff;
 	border-radius: 40px;
 	background: #fff;
@@ -93,7 +93,7 @@
 	width: 22px;
 	height: 22px;
 	border-radius: 999px;
-	background: linear-gradient(180deg, #fff2be 0%, #ffd362 100%);
+	background: linear-gradient(180deg, #fdfdfd 0%, #fcfbf9 100%);
 	box-shadow: 0 0 24px rgb(255 211 98 / 40%);
 }
 
@@ -108,7 +108,7 @@
 .rhythm-bars__item {
 	width: 88px;
 	border-radius: 999px;
-	background: linear-gradient(180deg, rgb(255 240 198 / 88%) 0%, rgb(255 251 244 / 36%) 100%);
+	background: linear-gradient(180deg, rgba(252, 251, 251, 0.88) 0%, rgb(255 251 244 / 36%) 100%);
 	border: 1px solid rgb(168 123 57 / 10%);
 }
 
@@ -142,5 +142,5 @@
 
 .login-button.button-hover {
 	transform: translateY(-2px);
-	box-shadow: 0 22px 32px rgb(244 184 52 / 32%);
+	box-shadow: 0 22px 32px rgba(8, 8, 8, 0.32);
 }

@@ -14,7 +14,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#fff',
-    navigationBarTitleText: '商城',
+    navigationBarTitleText: '',
     navigationBarTextStyle: 'black'
   },
   tabBar: {

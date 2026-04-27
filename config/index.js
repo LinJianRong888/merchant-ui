@@ -21,7 +21,6 @@ export default defineConfig(async (merge, { command, mode }) => {
     sourceRoot: 'src',
     outputRoot: 'dist',
     plugins: [
-      "@tarojs/plugin-generator"
     ],
     defineConstants: {
       'process.env.TARO_APP_API_URL': JSON.stringify(apiBaseUrl)

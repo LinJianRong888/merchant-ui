@@ -46,18 +46,18 @@
       </view>
 
       <view class="product-specs">
-        <text class="specs-title">图文详情</text>
+        <text class="specs-title">商品详情</text>
         <view class="spec-item">
           <text class="spec-label">规格</text>
-          <text class="spec-value">{{ product.specification || '249g/盒' }}</text>
+          <text class="spec-value">{{ product.specification || '-' }}</text>
         </view>
         <view class="spec-item">
-          <text class="spec-label">产地</text>
-          <text class="spec-value">{{ product.packaging || '广东省广州市（以实际商品批次为准）' }}</text>
+          <text class="spec-label">包装</text>
+          <text class="spec-value">{{ product.packaging || '-' }}</text>
         </view>
         <view class="spec-item">
-          <text class="spec-label">产地</text>
-          <text class="spec-value">{{ product.shelf_life || '0-4度' }}</text>
+          <text class="spec-label">保质期</text>
+          <text class="spec-value">{{ product.shelf_life || '-' }}</text>
         </view>
       </view>
 
@@ -69,6 +69,7 @@
           </view>
         </view>
         <view class="bottom-right">
+      
           <button class="btn-buy-now" :loading="isSubmitting" @tap="handlePlaceOrder">立即购买</button>
         </view>
       </view>
