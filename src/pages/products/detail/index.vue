@@ -1,15 +1,5 @@
 <template>
   <view class="product-detail-page">
-    <view class="nav-bar">
-      <view class="nav-back" @tap="goBack">
-        <text class="nav-back-icon">‹</text>
-      </view>
-      <text class="nav-title">商品详情</text>
-      <view class="nav-more">
-        <text class="nav-more-icon">⋯</text>
-      </view>
-    </view>
-
     <view v-if="isLoading" class="detail-skeleton">
       <view class="detail-skeleton__media"></view>
       <view class="detail-skeleton__line detail-skeleton__line--title"></view>
@@ -67,9 +57,14 @@
             <image class="bottom-btn-icon" :src="homeIcon" mode="aspectFit" />
             <text class="bottom-btn-text">首页</text>
           </view>
+          <view class="bottom-btn cart-btn" @tap="handleGoToCart">
+            <image class="bottom-btn-icon" :src="cartIcon" mode="aspectFit" />
+            <view class="cart-badge" v-if="cartTotalCount > 0">{{ cartTotalCount }}</view>
+            <text class="bottom-btn-text">购物车</text>
+          </view>
         </view>
         <view class="bottom-right">
-      
+          <button class="btn-add-cart" :loading="isAddingToCart" @tap="handleAddToCart">加入购物车</button>
           <button class="btn-buy-now" :loading="isSubmitting" @tap="handlePlaceOrder">立即购买</button>
         </view>
       </view>
@@ -82,7 +77,9 @@ import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 
 import { getSaleProductDetail } from '@/api/products'
+import { useCartStore } from '@/stores/cart'
 import homeIcon from '@/assets/home.png'
+import cartIcon from '@/assets/cart.svg'
 
 import './index.scss'
 
@@ -132,12 +129,14 @@ function formatError (error) {
 
 export default {
   setup () {
+    const cartStore = useCartStore()
     const productId = ref('')
     const product = ref(null)
     const quantity = ref(1)
     const isLoading = ref(true)
     const isFetching = ref(false)
     const isSubmitting = ref(false)
+    const isAddingToCart = ref(false)
     const loadError = ref(null)
 
     const isError = computed(() => Boolean(loadError.value))
@@ -151,6 +150,8 @@ export default {
 
       return `¥${(unitPrice * quantity.value).toFixed(2)}`
     })
+
+    const cartTotalCount = computed(() => cartStore.cartTotalCount)
 
     async function loadProductDetail () {
       if (!productId.value || isFetching.value) {
@@ -195,16 +196,43 @@ export default {
       void handleSelectAddress()
     }
 
+    function handleGoToCart () {
+      Taro.navigateTo({
+        url: '/pages/cart/index'
+      })
+    }
+
+    async function handleAddToCart () {
+      if (!product.value?.id || isAddingToCart.value) {
+        return
+      }
+
+      isAddingToCart.value = true
+
+      try {
+        await cartStore.addToCart(product.value, quantity.value)
+        Taro.showToast({
+          title: '已加入购物车',
+          icon: 'success',
+          duration: 1500
+        })
+      } catch (error) {
+        console.error('[detail] addToCart error', error)
+        Taro.showToast({
+          title: '添加失败',
+          icon: 'none'
+        })
+      } finally {
+        isAddingToCart.value = false
+      }
+    }
+
     function handleDecreaseQuantity () {
       quantity.value = Math.max(1, quantity.value - 1)
     }
 
     function handleIncreaseQuantity () {
       quantity.value = Math.min(99, quantity.value + 1)
-    }
-
-    function goBack() {
-      Taro.navigateBack()
     }
 
     function goHome() {
@@ -216,6 +244,7 @@ export default {
     useLoad((params) => {
       productId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
       void loadProductDetail()
+      cartStore.hydrate()
     })
 
     usePullDownRefresh(async () => {
@@ -230,18 +259,22 @@ export default {
       errorMessage,
       handleDecreaseQuantity,
       handleIncreaseQuantity,
+      handleGoToCart,
+      handleAddToCart,
       handlePlaceOrder,
       isError,
       isFetching,
       isLoading,
       isSubmitting,
+      isAddingToCart,
       loadProductDetail,
       orderAmountText,
       product,
       quantity,
-      goBack,
+      cartTotalCount,
       goHome,
-      homeIcon
+      homeIcon,
+      cartIcon
     }
   }
 }

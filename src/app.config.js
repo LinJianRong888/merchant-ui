@@ -3,6 +3,7 @@ export default defineAppConfig({
     'pages/home/index',
     'pages/products/index',
     'pages/products/detail/index',
+    'pages/cart/index',
     'pages/orders/index',
     'pages/orders/detail/index',
     'pages/orders/address-select/index',
