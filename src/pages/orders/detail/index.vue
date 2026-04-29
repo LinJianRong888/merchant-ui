@@ -74,6 +74,7 @@
       </view>
 
       <view v-if="order.status === 'pending'" class="detail-footer">
+        <button class="detail-cancel-button" :loading="isCancelling" @tap="handleCancel">取消订单</button>
         <button class="detail-pay-button" :loading="isPaying" @tap="handlePay">继续支付</button>
       </view>
     </view>
@@ -84,7 +85,7 @@
 import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 
-import { createOrderPayment, getOrderDetail, listOrders } from '@/api/orders'
+import { createOrderPayment, getOrderDetail, listOrders, cancelOrder } from '@/api/orders'
 
 import './index.scss'
 
@@ -149,6 +150,7 @@ export default {
     const isLoading = ref(true)
     const isFetching = ref(false)
     const isPaying = ref(false)
+    const isCancelling = ref(false)
     const loadError = ref(null)
 
     const isError = computed(() => Boolean(loadError.value))
@@ -223,6 +225,28 @@ export default {
       }
     }
 
+    async function handleCancel () {
+      if (!order.value?.id || isCancelling.value) return
+      Taro.showModal({
+        title: '确认取消订单？',
+        content: '取消后订单将无法恢复',
+        success: async (res) => {
+          if (res.confirm) {
+            isCancelling.value = true
+            try {
+              await cancelOrder(order.value.id)
+              Taro.showToast({ title: '取消成功', icon: 'success' })
+              await loadOrder()
+            } catch (error) {
+              Taro.showToast({ title: error?.message || '取消失败', icon: 'none' })
+            } finally {
+              isCancelling.value = false
+            }
+          }
+        }
+      })
+    }
+
     useLoad((params) => {
       orderId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
       void loadOrder()
@@ -243,7 +267,9 @@ export default {
       formatDateTime,
       formatPrice,
       fullAddressText,
+      handleCancel,
       handlePay,
+      isCancelling,
       isError,
       isFetching,
       isLoading,

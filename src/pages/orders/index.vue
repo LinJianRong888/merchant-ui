@@ -65,7 +65,7 @@
             <text class="total-price">{{ order.totalAmountText }}</text>
           </view>
           <view class="order-actions" @tap.stop>
-            <button v-if="order.canPay" class="action-btn action-btn--cancel" @tap="handleCancelOrder(order)">取消订单</button>
+            <button v-if="order.canPay" class="action-btn action-btn--cancel" :loading="cancellingOrderId === order.id" @tap="handleCancelOrder(order)">取消订单</button>
             <button v-if="order.canPay" class="action-btn action-btn--pay" :loading="payingOrderId === order.id" @tap="handlePayOrder(order)">去支付</button>
           </view>
         </view>
@@ -82,7 +82,7 @@
 import { computed, ref } from 'vue'
 import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 
-import { createOrderPayment, listOrders } from '@/api/orders'
+import { createOrderPayment, listOrders, cancelOrder } from '@/api/orders'
 import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
@@ -216,6 +216,7 @@ export default {
     const isFetching = ref(false)
     const loadError = ref(null)
     const payingOrderId = ref(null)
+    const cancellingOrderId = ref(null)
 
     const tabs = [
       { label: '全部', value: 'all' },
@@ -239,16 +240,23 @@ export default {
       activeFilter.value = tabValue
     }
 
-    function handleCancelOrder (order) {
+    async function handleCancelOrder (order) {
+      if (!order?.id || cancellingOrderId.value) return
       Taro.showModal({
-        title: '提示',
-        content: '确定取消该订单吗？',
-        success: (res) => {
+        title: '确认取消订单？',
+        content: '取消后订单将无法恢复',
+        success: async (res) => {
           if (res.confirm) {
-            Taro.showToast({
-              title: '订单已取消',
-              icon: 'none'
-            })
+            cancellingOrderId.value = order.id
+            try {
+              await cancelOrder(order.id)
+              Taro.showToast({ title: '取消成功', icon: 'success' })
+              await loadOrders()
+            } catch (error) {
+              Taro.showToast({ title: error?.message || '取消失败', icon: 'none' })
+            } finally {
+              cancellingOrderId.value = null
+            }
           }
         }
       })
@@ -394,6 +402,7 @@ export default {
       isLoading,
       orders,
       payingOrderId,
+      cancellingOrderId,
       skeletonItems,
       tabs,
       activeFilter,

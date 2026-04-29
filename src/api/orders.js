@@ -90,3 +90,12 @@ export async function listOrders () {
     method: 'GET'
   })
 }
+
+export async function cancelOrder (orderId) {
+  const response = await request.post(`/api/v1/orders/${orderId}/cancel/`)
+
+  return ensureSuccessResponse(response, '取消订单失败', {
+    url: `/api/v1/orders/${orderId}/cancel/`,
+    method: 'POST'
+  })
+}

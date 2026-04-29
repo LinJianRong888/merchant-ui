@@ -269,10 +269,28 @@
 	padding: 16px 24px;
 	padding-bottom: calc(16px + env(safe-area-inset-bottom));
 	background: #fff;
+	display: flex;
+	gap: 16px;
+}
+
+.detail-cancel-button {
+	flex: 1;
+	height: 92px;
+	line-height: 92px;
+	border-radius: 999px;
+	background: #f8f8f8;
+	color: #666;
+	font-size: 30px;
+	font-weight: 700;
+	border: none;
+}
+
+.detail-cancel-button::after {
+	border: none;
 }
 
 .detail-pay-button {
-	width: 100%;
+	flex: 1;
 	height: 92px;
 	line-height: 92px;
 	border-radius: 999px;

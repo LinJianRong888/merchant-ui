@@ -87,7 +87,7 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 
 import { createOrderPayment, createSaleOrder } from '@/api/orders'
@@ -160,6 +160,12 @@ async function confirmOrderPaid (targetOrder) {
   return null
 }
 
+function validateCartItems(items) {
+  if (!items || items.length === 0) return false
+  const hasValidQuantity = items.every(item => item.quantity >= 1)
+  return hasValidQuantity
+}
+
 export default {
   setup() {
     const cartStore = useCartStore()
@@ -178,10 +184,25 @@ export default {
     })
 
     const cartItems = computed(() => {
-      if (selectedItemIds.value.length > 0) {
-        return cartStore.cartItems.filter(item => selectedItemIds.value.includes(item.id))
+      if (fromCart.value) {
+        if (selectedItemIds.value.length > 0) {
+          return cartStore.cartItems.filter(item => selectedItemIds.value.includes(item.id))
+        }
+        return cartStore.cartItems
       }
-      return cartStore.cartItems
+      
+      // 单商品购买模式
+      if (product.value) {
+        return [{
+          id: product.value.id,
+          name: product.value.name,
+          price: product.value.price,
+          quantity: pageParams.value.quantity,
+          specification: product.value.specification,
+          coverImage: product.value.image || product.value.product_image || ''
+        }]
+      }
+      return []
     })
 
     const selectedAddress = computed(() => {
@@ -196,6 +217,20 @@ export default {
       const amount = cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
       return formatPrice(amount)
     })
+
+    // 监听商品变化，如果商品数量或种类少于1则关闭页面
+    watch(cartItems, (newItems) => {
+      const isValid = validateCartItems(newItems)
+      if (!isValid && !isLoading.value) {
+        Taro.showToast({
+          title: '商品数据异常',
+          icon: 'none'
+        })
+        setTimeout(() => {
+          Taro.navigateBack()
+        }, 1000)
+      }
+    }, { deep: true })
 
     async function loadProductDetail () {
       if (!pageParams.value.productId || fromCart.value) {
@@ -232,11 +267,41 @@ export default {
     }
 
     async function handleDecreaseQuantity (itemId, currentQuantity) {
-      await cartStore.updateQuantity(itemId, currentQuantity - 1)
+      const newQuantity = currentQuantity - 1
+      
+      if (fromCart.value) {
+        // 如果是购物车模式
+        if (newQuantity < 1) {
+          // 数量减少到0时，检查是否还有其他商品
+          const otherItems = cartItems.value.filter(item => item.id !== itemId)
+          if (otherItems.length > 0) {
+            // 还有其他商品，可以删除当前商品
+            await cartStore.removeItem(itemId)
+            // 从选中列表中移除
+            const index = selectedItemIds.value.indexOf(itemId)
+            if (index > -1) {
+              selectedItemIds.value.splice(index, 1)
+            }
+          } else {
+            // 没有其他商品了，不允许删除，保持数量为1
+            return
+          }
+        } else {
+          // 数量大于0，更新数量
+          await cartStore.updateQuantity(itemId, newQuantity)
+        }
+      } else {
+        // 单商品模式，不允许数量小于1
+        pageParams.value.quantity = Math.max(1, newQuantity)
+      }
     }
 
     async function handleIncreaseQuantity (itemId, currentQuantity) {
-      await cartStore.updateQuantity(itemId, currentQuantity + 1)
+      if (fromCart.value) {
+        await cartStore.updateQuantity(itemId, currentQuantity + 1)
+      } else {
+        pageParams.value.quantity = Math.min(99, pageParams.value.quantity + 1)
+      }
     }
 
     function handleRemarkInput (e) {
@@ -244,6 +309,16 @@ export default {
     }
 
     async function handleSubmitOrder () {
+      // 校验商品数据
+      const isValid = validateCartItems(cartItems.value)
+      if (!isValid) {
+        Taro.showToast({
+          title: '商品数据异常',
+          icon: 'none'
+        })
+        return
+      }
+
       if (!selectedAddressId.value || (!fromCart.value && !pageParams.value.productId) || (fromCart.value && !cartItems.value.length)) {
         Taro.showToast({
           title: '请选择收货地址',
@@ -256,6 +331,13 @@ export default {
 
       try {
         const selectedAddr = addresses.value.find((a) => a.id === selectedAddressId.value)
+
+        // 添加调试日志
+        console.log('[order-confirm] submitting order', {
+          fromCart: fromCart.value,
+          cartItems: cartItems.value,
+          products: fromCart.value ? cartItems.value.map(item => ({ id: item.id, quantity: item.quantity })) : null
+        })
 
         let order
         if (fromCart.value) {
@@ -365,6 +447,18 @@ export default {
       ])
 
       isLoading.value = false
+
+      // 页面加载完成后校验商品数据
+      const isValid = validateCartItems(cartItems.value)
+      if (!isValid) {
+        Taro.showToast({
+          title: '商品数据异常',
+          icon: 'none'
+        })
+        setTimeout(() => {
+          Taro.navigateBack()
+        }, 1000)
+      }
     })
 
     return {
