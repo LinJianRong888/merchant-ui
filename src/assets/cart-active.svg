@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="81" height="81" viewBox="0 0 81 81">
+  <!-- 发光外层 -->
+  <path d="M15 15h5l3 30h40l8-20h-40"
+        stroke="#FFCC00" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"
+        opacity="0.4" filter="url(#cart-glow)"/>
+  <!-- 发光左轮 -->
+  <circle cx="27" cy="60" r="5" fill="#FFCC00" opacity="0.4" filter="url(#cart-glow)"/>
+  <!-- 发光右轮 -->
+  <circle cx="54" cy="60" r="5" fill="#FFCC00" opacity="0.4" filter="url(#cart-glow)"/>
+  <!-- 主描边 -->
+  <path d="M15 15h5l3 30h40l8-20h-40"
+        stroke="#FFCC00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="27" cy="60" r="5" fill="#FFCC00"/>
+  <circle cx="54" cy="60" r="5" fill="#FFCC00"/>
+  <!-- 滤镜定义 -->
+  <defs>
+    <filter id="cart-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

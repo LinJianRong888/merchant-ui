@@ -20,6 +20,10 @@
 
     <view v-else class="cart-list">
       <view class="cart-item" v-for="(item, index) in cartItems" :key="item.id">
+        <view class="checkbox" @tap="toggleSelectItem(item.id)">
+          <view v-if="selectedItemIds.includes(item.id)" class="checkbox-inner checked"></view>
+          <view v-else class="checkbox-inner"></view>
+        </view>
         <image class="item-image" :src="item.coverImage || ''" mode="aspectFill" />
         <view class="item-info">
           <text class="item-name">{{ item.name }}</text>
@@ -42,17 +46,17 @@
     <view v-if="hasItems" class="bottom-bar">
       <view class="total-info">
         <text class="total-label">合计：</text>
-        <text class="total-price">¥{{ formatPrice(cartTotalAmount) }}</text>
+        <text class="total-price">¥{{ formatPrice(selectedTotalAmount) }}</text>
       </view>
-      <button class="checkout-btn" :loading="isCheckoutLoading" @tap="handleCheckout">
-        结算 ({{ cartTotalCount }})
+      <button class="checkout-btn" :disabled="!hasSelectedItems" :loading="isCheckoutLoading" @tap="handleCheckout">
+        结算 ({{ selectedTotalCount }})
       </button>
     </view>
   </view>
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Taro, { useLoad, usePullDownRefresh } from '@tarojs/taro'
 
 import { useCartStore } from '@/stores/cart'
@@ -72,11 +76,40 @@ export default {
     const cartStore = useCartStore()
     const isLoading = ref(true)
     const isCheckoutLoading = ref(false)
+    const selectedItemIds = ref([])
 
     const cartItems = computed(() => cartStore.cartItems)
     const cartTotalCount = computed(() => cartStore.cartTotalCount)
     const cartTotalAmount = computed(() => cartStore.cartTotalAmount)
     const hasItems = computed(() => cartStore.hasItems)
+
+    const selectedItems = computed(() => {
+      return cartItems.value.filter(item => selectedItemIds.value.includes(item.id))
+    })
+
+    const selectedTotalCount = computed(() => {
+      return selectedItems.value.reduce((sum, item) => sum + item.quantity, 0)
+    })
+
+    const selectedTotalAmount = computed(() => {
+      return selectedItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    })
+
+    const hasSelectedItems = computed(() => selectedItems.value.length > 0)
+
+    watch(cartItems, (newItems) => {
+      const existingIds = newItems.map(item => item.id)
+      selectedItemIds.value = selectedItemIds.value.filter(id => existingIds.includes(id))
+    }, { deep: true })
+
+    function toggleSelectItem(itemId) {
+      const index = selectedItemIds.value.indexOf(itemId)
+      if (index > -1) {
+        selectedItemIds.value.splice(index, 1)
+      } else {
+        selectedItemIds.value.push(itemId)
+      }
+    }
 
     function goHome() {
       Taro.switchTab({
@@ -103,6 +136,10 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             await cartStore.removeItem(itemId)
+            const index = selectedItemIds.value.indexOf(itemId)
+            if (index > -1) {
+              selectedItemIds.value.splice(index, 1)
+            }
             Taro.showToast({
               title: '已删除',
               icon: 'success'
@@ -121,6 +158,7 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             await cartStore.clear()
+            selectedItemIds.value = []
             Taro.showToast({
               title: '已清空',
               icon: 'success'
@@ -131,13 +169,13 @@ export default {
     }
 
     async function handleCheckout() {
-      if (!hasItems.value) return
+      if (!hasSelectedItems.value) return
 
       isCheckoutLoading.value = true
 
       try {
         await Taro.navigateTo({
-          url: '/pages/orders/address-select/index?fromCart=true'
+          url: '/pages/orders/address-select/index?fromCart=true&selectedIds=' + encodeURIComponent(JSON.stringify(selectedItemIds.value))
         })
       } catch (error) {
         console.error('[cart] checkout error', error)
@@ -167,13 +205,18 @@ export default {
       hasItems,
       isLoading,
       isCheckoutLoading,
+      selectedItemIds,
+      selectedTotalCount,
+      selectedTotalAmount,
+      hasSelectedItems,
       goHome,
       formatPrice,
       handleDecreaseQuantity,
       handleIncreaseQuantity,
       handleDeleteItem,
       handleClearCart,
-      handleCheckout
+      handleCheckout,
+      toggleSelectItem
     }
   }
 }

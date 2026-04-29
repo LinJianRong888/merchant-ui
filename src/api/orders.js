@@ -32,17 +32,31 @@ function ensureSuccessResponse (response, fallbackMessage, requestMeta) {
   throw error
 }
 
-export async function createSaleOrder ({ productId, quantity, address }) {
+export async function createSaleOrder ({ productId, quantity, products, address }) {
   if (!address) {
     throw new Error('地址参数必填')
   }
 
-  const response = await request.post('/api/v1/orders/', {
+  const orderData = {
     order_type: ORDER_TYPE_SALE,
-    product_id: productId,
-    quantity,
     address
-  })
+  }
+
+  if (products && products.length > 0) {
+    // 多商品模式
+    orderData.products = products.map(p => ({
+      product_id: p.id,
+      quantity: p.quantity
+    }))
+  } else if (productId) {
+    // 单商品模式（向后兼容）
+    orderData.product_id = productId
+    orderData.quantity = quantity
+  } else {
+    throw new Error('商品参数必填')
+  }
+
+  const response = await request.post('/api/v1/orders/', orderData)
 
   return ensureSuccessResponse(response, '创建订单失败', {
     url: '/api/v1/orders/',

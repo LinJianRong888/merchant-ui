@@ -161,7 +161,7 @@ async function confirmOrderPaid (targetOrder) {
 }
 
 export default {
-  setup () {
+  setup() {
     const cartStore = useCartStore()
     const addresses = ref([])
     const selectedAddressId = ref(null)
@@ -170,22 +170,30 @@ export default {
     const isLoading = ref(true)
     const isSubmitting = ref(false)
     const fromCart = ref(false)
+    const selectedItemIds = ref([])
 
     const pageParams = ref({
       productId: '',
       quantity: 1
     })
 
-    const cartItems = computed(() => cartStore.cartItems)
+    const cartItems = computed(() => {
+      if (selectedItemIds.value.length > 0) {
+        return cartStore.cartItems.filter(item => selectedItemIds.value.includes(item.id))
+      }
+      return cartStore.cartItems
+    })
 
     const selectedAddress = computed(() => {
       return addresses.value.find((a) => a.id === selectedAddressId.value) || null
     })
 
-    const totalQuantity = computed(() => cartStore.cartTotalCount)
+    const totalQuantity = computed(() => {
+      return cartItems.value.reduce((sum, item) => sum + item.quantity, 0)
+    })
 
     const totalPrice = computed(() => {
-      const amount = cartStore.cartTotalAmount
+      const amount = cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
       return formatPrice(amount)
     })
 
@@ -251,10 +259,11 @@ export default {
 
         let order
         if (fromCart.value) {
-          const firstItem = cartItems.value[0]
           order = await createSaleOrder({
-            productId: firstItem.id,
-            quantity: firstItem.quantity,
+            products: cartItems.value.map(item => ({
+              id: item.id,
+              quantity: item.quantity
+            })),
             address: {
               contact_name: selectedAddr.contact_name,
               contact_phone: selectedAddr.contact_phone,
@@ -294,7 +303,9 @@ export default {
         const paidOrder = await confirmOrderPaid(order)
 
         if (paidOrder?.status === 'paid') {
-          if (fromCart.value) { await cartStore.clear() }
+          if (fromCart.value && selectedItemIds.value.length > 0) {
+            await cartStore.clearSelected(selectedItemIds.value)
+          }
           Taro.showToast({
             title: '支付成功',
             icon: 'success'
@@ -327,6 +338,15 @@ export default {
       const params = getCurrentInstance()?.router?.params || {}
 
       fromCart.value = params.fromCart === 'true' || params.fromCart === true
+
+      if (params.selectedIds) {
+        try {
+          selectedItemIds.value = JSON.parse(decodeURIComponent(params.selectedIds))
+        } catch (e) {
+          console.error('[order-confirm] parse selectedIds error', e)
+          selectedItemIds.value = []
+        }
+      }
 
       if (fromCart.value) {
         await cartStore.hydrate()

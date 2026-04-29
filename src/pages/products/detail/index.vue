@@ -197,7 +197,7 @@ export default {
     }
 
     function handleGoToCart () {
-      Taro.navigateTo({
+      Taro.switchTab({
         url: '/pages/cart/index'
       })
     }

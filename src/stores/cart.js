@@ -86,6 +86,28 @@ export const useCartStore = defineStore('cart', {
         console.error('[cart-store] clear error', error)
         throw error
       }
+    },
+
+    async clearSelected(selectedIds) {
+      try {
+        const currentItems = await getCartItems()
+        const newItems = currentItems.filter(item => !selectedIds.includes(item.id))
+        
+        const { setStorageSync } = Taro
+        setStorageSync('cart_items', newItems)
+        
+        this.items = newItems
+        this.totalCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
+        
+        return {
+          success: true,
+          cartItems: newItems,
+          totalItems: this.totalCount
+        }
+      } catch (error) {
+        console.error('[cart-store] clearSelected error', error)
+        throw error
+      }
     }
   }
 })
