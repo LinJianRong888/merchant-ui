@@ -49,8 +49,9 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
+import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { listUserAddresses, deleteUserAddress } from '@/api/user-addresses'
 
@@ -82,39 +83,38 @@ function formatQueryError (error) {
 export default {
   setup () {
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
-    const addresses = ref([])
-    const isLoading = ref(true)
-    const isFetching = ref(false)
-    const loadError = ref(null)
 
-    const isError = computed(() => Boolean(loadError.value))
-    const errorMessage = computed(() => formatQueryError(loadError.value))
-
-    async function loadAddresses () {
-      if (isFetching.value) {
-        return
-      }
-
-      isFetching.value = true
-      loadError.value = null
-
-      if (!addresses.value.length) {
-        isLoading.value = true
-      }
-
-      try {
+    const {
+      data: addresses,
+      isLoading,
+      isFetching,
+      isError,
+      error,
+      refetch
+    } = useAppQuery({
+      queryKey: ['user-addresses'],
+      queryFn: async () => {
         const response = await listUserAddresses()
-        addresses.value = Array.isArray(response) ? response : []
-      } catch (error) {
-        loadError.value = error
-      } finally {
-        isFetching.value = false
-        isLoading.value = false
+        return Array.isArray(response) ? response : []
       }
-    }
+    })
+
+    const addressList = computed(() => addresses.value || [])
+    const errorMessage = computed(() => formatQueryError(error.value))
+
+    const deleteMutation = useAppMutation({
+      mutationFn: (addressId) => deleteUserAddress(addressId),
+      onSuccess: () => {
+        Taro.showToast({ title: '删除成功', icon: 'success' })
+        void refetch()
+      },
+      onError: (error) => {
+        Taro.showToast({ title: error?.message || '删除失败', icon: 'none' })
+      }
+    })
 
     async function handleRetry () {
-      await loadAddresses()
+      await refetch()
     }
 
     async function handleAddAddress () {
@@ -136,17 +136,9 @@ export default {
         success: async (res) => {
           if (res.confirm) {
             try {
-              await deleteUserAddress(address.id)
-              Taro.showToast({
-                title: '删除成功',
-                icon: 'success'
-              })
-              await loadAddresses()
+              await deleteMutation.mutateAsync(address.id)
             } catch (error) {
-              Taro.showToast({
-                title: error?.message || '删除失败',
-                icon: 'none'
-              })
+              // 错误已在 mutation onError 中处理
             }
           }
         }
@@ -154,19 +146,19 @@ export default {
     }
 
     useDidShow(async () => {
-      await loadAddresses()
+      await refetch()
     })
 
     usePullDownRefresh(async () => {
       try {
-        await loadAddresses()
+        await refetch()
       } finally {
         Taro.stopPullDownRefresh()
       }
     })
 
     return {
-      addresses,
+      addresses: addressList,
       errorMessage,
       formatFullAddress,
       handleAddAddress,

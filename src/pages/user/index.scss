@@ -14,38 +14,47 @@
   align-items: center;
 }
 
+/* 未登录时的头像占位（不可点击选择） */
 .user-avatar {
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
-  border: 4rpx solid #fff;
-  background: rgba(255, 255, 255, 0.3);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #ffcc00;
 }
 
-.avatar-shell {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
-  border: 4rpx solid #fff;
-  background: #fff;
+/* 已登录时的头像选择按钮 */
+.avatar-btn {
+  width: 120rpx !important;
+  height: 120rpx !important;
+  min-width: 120rpx !important;
+  min-height: 120rpx !important;
+  max-width: 120rpx !important;
+  max-height: 120rpx !important;
+  border-radius: 60rpx !important;
   overflow: hidden;
-  padding: 0;
-  margin: 0;
-  line-height: normal;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: normal !important;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #ffcc00 !important;
+  border: none !important;
+  box-sizing: content-box;
 }
 
-.avatar-open-data {
+.avatar-btn::after {
+  border: none !important;
+}
+
+.avatar-image {
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
-  overflow: hidden;
   display: block;
 }
 
@@ -61,47 +70,27 @@
 
 .avatar-placeholder-text {
   font-size: 48rpx;
-  font-weight: bold;
-  color: #fff;
+  line-height: 1;
 }
 
 .user-detail {
   margin-left: 24rpx;
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
-.user-name {
+.welcome-text {
   font-size: 36rpx;
   font-weight: bold;
   color: #333;
   margin-bottom: 8rpx;
-}
-
-.user-name-blank {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: transparent;
-  margin-bottom: 8rpx;
-}
-
-.nickname-display {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8rpx;
-}
-
-.nickname-open-data {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  line-height: 1.2;
-  display: block;
 }
 
 .user-phone {
   font-size: 26rpx;
   color: #666;
+  margin-bottom: 8rpx;
 }
 
 .user-phone-hint {
@@ -109,15 +98,31 @@
   color: #999;
 }
 
-.get-phone-btn {
-  margin-top: 8rpx;
-  padding: 4rpx 16rpx;
-  font-size: 22rpx;
-  color: #ffcc00;
-  background: #333;
-  border-radius: 20rpx;
-  border: none;
-  line-height: 1.4;
+/* 获取/更新手机号按钮 — 深色背景胶囊样式 */
+.phone-action-btn {
+  margin-top: 4rpx !important;
+  padding: 0 24rpx !important;
+  height: 52rpx !important;
+  line-height: 52rpx !important;
+  font-size: 24rpx !important;
+  color: #fff !important;
+  background: #333 !important;
+  border-radius: 26rpx !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 160rpx !important;
+  max-width: 240rpx !important;
+}
+
+.phone-action-btn::after {
+  border: none !important;
+}
+
+.phone-action-btn:active {
+  opacity: 0.8;
 }
 
 .order-section {

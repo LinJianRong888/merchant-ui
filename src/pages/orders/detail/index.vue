@@ -12,7 +12,8 @@
     <view v-else-if="isError" class="detail-state-panel">
       <text class="detail-state-panel__title">加载失败</text>
       <text class="detail-state-panel__desc">{{ errorMessage }}</text>
-      <button class="detail-state-panel__button" :loading="isFetching" @tap="loadOrder">重试</button>
+      <button class="detail-state-panel__button" :loading="isFetching" @tap="refetch">重试</button>
+
     </view>
 
     <view v-else-if="order" class="detail-shell">
@@ -84,6 +85,7 @@
 <script>
 import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
+import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, getOrderDetail, listOrders, cancelOrder } from '@/api/orders'
 
@@ -146,15 +148,33 @@ function formatQueryError (error) {
 export default {
   setup () {
     const orderId = ref('')
-    const order = ref(null)
-    const isLoading = ref(true)
-    const isFetching = ref(false)
     const isPaying = ref(false)
     const isCancelling = ref(false)
-    const loadError = ref(null)
 
-    const isError = computed(() => Boolean(loadError.value))
-    const errorMessage = computed(() => formatQueryError(loadError.value))
+    const {
+      data: order,
+      isLoading,
+      isFetching,
+      isError,
+      error,
+      refetch
+    } = useAppQuery({
+      queryKey: computed(() => ['orders', 'detail', orderId.value]),
+      queryFn: async () => {
+        try {
+          return await getOrderDetail(orderId.value)
+        } catch {
+          const list = await listOrders()
+          if (Array.isArray(list)) {
+            return list.find((item) => String(item?.id) === String(orderId.value)) || null
+          }
+          return null
+        }
+      },
+      enabled: computed(() => Boolean(orderId.value))
+    })
+
+    const errorMessage = computed(() => formatQueryError(error.value))
     const createdAtText = computed(() => formatDateTime(order.value?.created_at))
     const statusMeta = computed(() => getStatusMeta(order.value?.status))
     const orderTypeLabel = computed(() => getOrderTypeLabel(order.value?.order_type))
@@ -162,41 +182,20 @@ export default {
     const orderAddress = computed(() => order.value?.address || null)
     const fullAddressText = computed(() => orderAddress.value ? formatFullAddress(orderAddress.value) : '')
 
-    async function fetchOrderDetail () {
-      try {
-        return await getOrderDetail(orderId.value)
-      } catch {
-        const list = await listOrders()
-        if (Array.isArray(list)) {
-          return list.find((item) => String(item?.id) === String(orderId.value)) || null
-        }
-        return null
+    const cancelMutation = useAppMutation({
+      mutationFn: () => cancelOrder(orderId.value),
+      onSuccess: () => {
+        Taro.showToast({ title: '取消成功', icon: 'success' })
+        void refetch()
+      },
+      onError: (error) => {
+        Taro.showToast({ title: error?.message || '取消失败', icon: 'none' })
       }
-    }
-
-    async function loadOrder () {
-      if (!orderId.value || isFetching.value) return
-      isFetching.value = true
-      loadError.value = null
-      if (!order.value) isLoading.value = true
-      try {
-        const data = await fetchOrderDetail()
-        if (data) {
-          order.value = data
-        } else {
-          throw new Error('订单不存在')
-        }
-      } catch (error) {
-        loadError.value = error
-      } finally {
-        isFetching.value = false
-        isLoading.value = false
-      }
-    }
+    })
 
     async function confirmOrderPaid () {
       for (let attempt = 0; attempt < PAYMENT_POLL_MAX_ATTEMPTS; attempt += 1) {
-        await loadOrder()
+        await refetch()
         if (order.value?.status === 'paid') return true
         if (attempt < PAYMENT_POLL_MAX_ATTEMPTS - 1) await sleep(PAYMENT_POLL_INTERVAL)
       }
@@ -234,11 +233,7 @@ export default {
           if (res.confirm) {
             isCancelling.value = true
             try {
-              await cancelOrder(order.value.id)
-              Taro.showToast({ title: '取消成功', icon: 'success' })
-              await loadOrder()
-            } catch (error) {
-              Taro.showToast({ title: error?.message || '取消失败', icon: 'none' })
+              await cancelMutation.mutateAsync()
             } finally {
               isCancelling.value = false
             }
@@ -249,12 +244,11 @@ export default {
 
     useLoad((params) => {
       orderId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
-      void loadOrder()
     })
 
     usePullDownRefresh(async () => {
       try {
-        await loadOrder()
+        await refetch()
       } finally {
         Taro.stopPullDownRefresh()
       }

@@ -10,7 +10,8 @@
     <view v-else-if="isError" class="detail-state-panel">
       <text class="detail-state-panel__title">加载失败</text>
       <text class="detail-state-panel__desc">{{ errorMessage }}</text>
-      <button class="detail-state-panel__button" :loading="isFetching" @tap="loadProductDetail">重试</button>
+      <button class="detail-state-panel__button" :loading="isFetching" @tap="refetch">重试</button>
+
     </view>
 
     <view v-else-if="product" class="product-detail-shell">
@@ -75,6 +76,7 @@
 <script>
 import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
+import { useAppQuery } from '@/utils/app-query'
 
 import { getSaleProductDetail } from '@/api/products'
 import { useCartStore } from '@/stores/cart'
@@ -131,16 +133,24 @@ export default {
   setup () {
     const cartStore = useCartStore()
     const productId = ref('')
-    const product = ref(null)
     const quantity = ref(1)
-    const isLoading = ref(true)
-    const isFetching = ref(false)
     const isSubmitting = ref(false)
     const isAddingToCart = ref(false)
-    const loadError = ref(null)
 
-    const isError = computed(() => Boolean(loadError.value))
-    const errorMessage = computed(() => formatError(loadError.value))
+    const {
+      data: product,
+      isLoading,
+      isFetching,
+      isError,
+      error,
+      refetch
+    } = useAppQuery({
+      queryKey: computed(() => ['products', 'detail', productId.value]),
+      queryFn: async () => normalizeProduct(await getSaleProductDetail(productId.value)),
+      enabled: computed(() => Boolean(productId.value))
+    })
+
+    const errorMessage = computed(() => formatError(error.value))
     const orderAmountText = computed(() => {
       const unitPrice = Number(product.value?.price)
 
@@ -152,29 +162,6 @@ export default {
     })
 
     const cartTotalCount = computed(() => cartStore.cartTotalCount)
-
-    async function loadProductDetail () {
-      if (!productId.value || isFetching.value) {
-        return
-      }
-
-      isFetching.value = true
-      loadError.value = null
-
-      if (!product.value) {
-        isLoading.value = true
-      }
-
-      try {
-        const response = await getSaleProductDetail(productId.value)
-        product.value = normalizeProduct(response)
-      } catch (error) {
-        loadError.value = error
-      } finally {
-        isFetching.value = false
-        isLoading.value = false
-      }
-    }
 
     async function handleSelectAddress () {
       if (!product.value?.id || isSubmitting.value) {
@@ -243,13 +230,12 @@ export default {
 
     useLoad((params) => {
       productId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
-      void loadProductDetail()
       cartStore.hydrate()
     })
 
     usePullDownRefresh(async () => {
       try {
-        await loadProductDetail()
+        await refetch()
       } finally {
         Taro.stopPullDownRefresh()
       }
@@ -267,7 +253,7 @@ export default {
       isLoading,
       isSubmitting,
       isAddingToCart,
-      loadProductDetail,
+      refetch,
       orderAmountText,
       product,
       quantity,

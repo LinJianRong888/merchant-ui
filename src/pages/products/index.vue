@@ -69,6 +69,7 @@
 <script>
 import { computed, ref } from 'vue'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
+import { useAppQuery } from '@/utils/app-query'
 
 import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
@@ -118,13 +119,55 @@ export default {
   setup () {
     const authStore = useAuthStore()
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
-    const products = ref([])
-    const isLoading = ref(true)
-    const isFetching = ref(false)
-    const loadError = ref(null)
+    const fallbackProducts = ref([])
+    const fallbackError = ref(null)
 
-    const isError = computed(() => Boolean(loadError.value))
-    const errorMessage = computed(() => formatQueryError(loadError.value))
+    const {
+      data: products,
+      isLoading,
+      isFetching,
+      isError,
+      error,
+      refetch
+    } = useAppQuery({
+      queryKey: ['products', 'list'],
+      queryFn: async () => normalizeProducts(await listSaleProducts()),
+      enabled: computed(() => authStore.isAuthenticated)
+    })
+
+    const productList = computed(() => products.value || fallbackProducts.value)
+    const hasError = computed(() => isError.value || Boolean(fallbackError.value))
+    const errorMessage = computed(() => formatQueryError(fallbackError.value || error.value))
+
+    async function loadProductsDirect () {
+      console.info('[products-page] fallback load start')
+      fallbackError.value = null
+      fallbackProducts.value = normalizeProducts(await listSaleProducts())
+      console.info('[products-page] fallback load success', {
+        count: fallbackProducts.value.length
+      })
+    }
+
+    async function refreshProducts () {
+      fallbackError.value = null
+
+      try {
+        const result = await refetch()
+
+        if (Array.isArray(result.data)) {
+          fallbackProducts.value = []
+          return
+        }
+      } catch (queryError) {
+        fallbackError.value = queryError
+      }
+
+      try {
+        await loadProductsDirect()
+      } catch (directError) {
+        fallbackError.value = directError
+      }
+    }
 
     async function navigateToLogin () {
       await Taro.redirectTo({
@@ -139,30 +182,7 @@ export default {
     }
 
     async function handleRetry () {
-      await loadProducts()
-    }
-
-    async function loadProducts () {
-      if (isFetching.value) {
-        return
-      }
-
-      isFetching.value = true
-      loadError.value = null
-
-      if (!products.value.length) {
-        isLoading.value = true
-      }
-
-      try {
-        const response = await listSaleProducts()
-        products.value = normalizeProducts(response)
-      } catch (error) {
-        loadError.value = error
-      } finally {
-        isFetching.value = false
-        isLoading.value = false
-      }
+      await refreshProducts()
     }
 
     async function handleOpenDetail (productId) {
@@ -175,13 +195,13 @@ export default {
       authStore.hydrate()
       void ensureAuthenticated()
       if (authStore.isAuthenticated) {
-        void loadProducts()
+        void refreshProducts()
       }
     })
 
     usePullDownRefresh(async () => {
       try {
-        await loadProducts()
+        await refreshProducts()
       } finally {
         Taro.stopPullDownRefresh()
       }
@@ -191,10 +211,10 @@ export default {
       errorMessage,
       handleRetry,
       handleOpenDetail,
-      isError,
+      isError: hasError,
       isFetching,
       isLoading,
-      products,
+      products: productList,
       skeletonItems
     }
   }

@@ -18,9 +18,10 @@ export function fetchWechatUserInfo ({ openid, appSlug = MERCHANT_MINIAPP_SLUG }
   })
 }
 
-export function fetchWechatPhoneNumber ({ code, appSlug = MERCHANT_MINIAPP_SLUG }) {
+export function fetchWechatPhoneNumber ({ code, appSlug = MERCHANT_MINIAPP_SLUG, updateProfilePhone = false }) {
   return request.post('/api/v1/wx/miniapp/phone-number/', {
     app_slug: appSlug,
-    code
+    code,
+    update_profile_phone: updateProfilePhone
   })
 }

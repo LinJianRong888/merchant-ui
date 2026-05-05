@@ -9,6 +9,12 @@ The `products` module provides mode-specific product browsing for the two busine
 
 The product model uses one shared `Product` record plus per-mode profiles.
 
+Current category note:
+
+- `Product` now belongs to a nullable `ProductCategory`
+- `category` is intentionally nullable during current migration period so existing test/legacy products can be backfilled manually
+- uncategorized products can be assigned through management command `python manage.py backfill_uncategorized_products <category_id>`
+
 Current image field note:
 
 - `Product.image`, `SampleProductProfile.image`, and `SaleProductProfile.image` are all nullable `ImageField`
@@ -43,6 +49,8 @@ Response item example:
   "profile_id": 2,
   "mode": "sale",
   "name": "护眼贴",
+  "category_id": 3,
+  "category_name": "护肤",
   "description": "基础商品描述",
   "product_image": null,
   "image": null,
@@ -76,6 +84,8 @@ Current serializer/API contract fields:
 - `profile_id`
 - `mode`
 - `name`
+- `category_id`
+- `category_name`
 - `description`
 - `product_image`
 - `image`
@@ -92,9 +102,11 @@ Current serializer/API contract fields:
 ## Domain Rules
 
 - `Product` stores shared identity and name-level information
+- `ProductCategory` stores reusable product classification metadata
 - `SampleProductProfile` and `SaleProductProfile` each store their own specification, shelf life, net content, packaging, price, stock, and image
 - Stock is mode-specific and currently implemented in the simplest form as a profile field
 - `Product` also has its own nullable image field for shared product-level visuals
+- `Product.category` is nullable for now to avoid migration failures on existing uncategorized data; manual backfill is expected before tightening rules later
 - The current implementation uses a flattened mode-specific API payload instead of nested profile objects
 - A product may have both `sample` and `sale` profiles at the same time
 - A product may temporarily have only one active mode profile, for example sample-only stock

@@ -92,6 +92,7 @@
 <script>
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { ref, computed } from 'vue'
+import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { listSaleProducts } from '@/api/products'
 import './index.scss'
@@ -108,14 +109,6 @@ function formatPrice (price) {
   return '¥--'
 }
 
-function formatStock (stock) {
-  const value = Number(stock)
-  if (Number.isFinite(value)) {
-    return String(value)
-  }
-  return '--'
-}
-
 function normalizeProducts (items) {
   return items
     .filter((item) => item?.is_available)
@@ -128,15 +121,56 @@ function normalizeProducts (items) {
     }))
 }
 
+function formatStock (stock) {
+  const value = Number(stock)
+  if (Number.isFinite(value)) {
+    return String(value)
+  }
+  return '--'
+}
+
 export default {
   setup() {
     const authStore = useAuthStore()
-    const products = ref([])
-    const isLoading = ref(true)
-    const isFetching = ref(false)
     const searchQuery = ref('')
+    const fallbackProducts = ref([])
 
-    const banners = computed(() => products.value
+    const {
+      data: products,
+      isLoading,
+      isFetching,
+      refetch
+    } = useAppQuery({
+      queryKey: ['products', 'home'],
+      queryFn: async () => normalizeProducts(await listSaleProducts()),
+      enabled: computed(() => authStore.isAuthenticated)
+    })
+
+    const productList = computed(() => products.value || fallbackProducts.value)
+
+    async function loadProductsDirect() {
+      console.info('[home-page] fallback load start')
+      fallbackProducts.value = normalizeProducts(await listSaleProducts())
+      console.info('[home-page] fallback load success', {
+        count: fallbackProducts.value.length
+      })
+    }
+
+    async function refreshProducts() {
+      try {
+        const result = await refetch()
+
+        if (Array.isArray(result.data)) {
+          fallbackProducts.value = []
+          return
+        }
+      } catch {
+      }
+
+      await loadProductsDirect()
+    }
+
+    const banners = computed(() => productList.value
       .filter((item) => item.coverImage)
       .slice(0, 3)
       .map((item) => ({
@@ -145,7 +179,7 @@ export default {
         name: item.name
       })))
 
-    const hotProducts = computed(() => products.value.slice(0, 3))
+    const hotProducts = computed(() => productList.value.slice(0, 3))
 
     // 搜索匹配的商品
     const searchResults = computed(() => {
@@ -154,7 +188,7 @@ export default {
       }
       
       const queryLower = searchQuery.value.toLowerCase()
-      return products.value.filter(product => 
+      return productList.value.filter(product => 
         (product.name || '').toLowerCase().includes(queryLower)
       )
     })
@@ -183,28 +217,6 @@ export default {
       }
     }
 
-    async function loadProducts () {
-      if (isFetching.value) {
-        return
-      }
-
-      isFetching.value = true
-
-      if (!products.value.length) {
-        isLoading.value = true
-      }
-
-      try {
-        const response = await listSaleProducts()
-        products.value = normalizeProducts(response)
-      } catch (error) {
-        console.error('加载商品失败', error)
-      } finally {
-        isFetching.value = false
-        isLoading.value = false
-      }
-    }
-
     function handleProductDetail(productId) {
       Taro.navigateTo({
         url: `${PRODUCT_DETAIL_PAGE}?id=${productId}`
@@ -221,13 +233,13 @@ export default {
       authStore.hydrate()
       void ensureAuthenticated()
       if (authStore.isAuthenticated) {
-        void loadProducts()
+        void refreshProducts()
       }
     })
 
     usePullDownRefresh(async () => {
       try {
-        await loadProducts()
+        await refreshProducts()
       } finally {
         Taro.stopPullDownRefresh()
       }

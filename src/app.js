@@ -1,9 +1,10 @@
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
+import { VueQueryPlugin } from '@tanstack/vue-query'
 
 import { useAuthStore } from '@/stores/auth'
+import { queryClient } from '@/query-client'
 
 import './app.scss'
 
@@ -18,7 +19,6 @@ const App = createApp({
 })
 
 const pinia = createPinia()
-const queryClient = new QueryClient()
 const authStore = useAuthStore(pinia)
 
 authStore.hydrate()

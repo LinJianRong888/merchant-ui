@@ -35,7 +35,9 @@
               class="phone-action-btn"
               open-type="getPhoneNumber"
               @getphonenumber="onGetPhoneNumber"
-            >{{ profilePhone ? '更新手机号' : '获取手机号' }}</button>
+            >
+              {{ profilePhone ? '更新手机号' : '获取手机号' }}
+            </button>
           </template>
           <text v-else class="user-phone-hint" @tap="goToLogin">点击登录</text>
         </view>
@@ -127,7 +129,7 @@
 <script>
 import Taro, { useDidShow } from '@tarojs/taro'
 import { ref, computed } from 'vue'
-import { useAppQuery } from '@/utils/app-query'
+import { useQuery } from '@tanstack/vue-query'
 import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser } from '@/api/users'
 import { listOrders } from '@/api/orders'
@@ -143,27 +145,29 @@ const STORAGE_AVATAR_KEY = 'user_avatar_url'
 export default {
   setup() {
     const authStore = useAuthStore()
+
     const isLoggedIn = computed(() => authStore.isAuthenticated)
 
-    // ---- 头像（本地存储，无需后端） ----
+    // ---- 头像（本地存储） ----
     const avatarUrl = ref(Taro.getStorageSync(STORAGE_AVATAR_KEY) || '')
 
     function onChooseAvatar(e) {
-      const url = e.detail && e.detail.avatarUrl
-      if (!url) return
-      avatarUrl.value = url
-      Taro.setStorageSync(STORAGE_AVATAR_KEY, url)
+      const url = e.detail.avatarUrl
+      if (url) {
+        avatarUrl.value = url
+        Taro.setStorageSync(STORAGE_AVATAR_KEY, url)
+      }
     }
 
-    // ---- 手机号（从后端 GET /api/v1/users/me/ 读取） ----
+    // ---- 手机号（从后端读取） ----
     const {
       data: userInfo,
       refetch: refetchUser
-    } = useAppQuery({
-      queryKey: ['user-info', 'me'],
+    } = useQuery({
+      queryKey: ['user-info'],
       queryFn: getCurrentUser,
       enabled: computed(() => authStore.isAuthenticated),
-      retry: 0
+      retry: 1
     })
 
     const profilePhone = computed(() => {
@@ -188,38 +192,30 @@ export default {
         return
       }
       try {
-        const response = await fetchWechatPhoneNumber({
-          code,
-          updateProfilePhone: true
-        })
+        // 传 update_profile_phone: true，后端获取手机号的同时保存到 profile.phone
+        const response = await fetchWechatPhoneNumber({ code, updateProfilePhone: true })
         const data = response.data || response
 
-        // 更新本地 store
+        // 更新本地 store（方便其他页面使用）
         authStore.setPhoneNumber({
           phone_number: data.phone_number || '',
           pure_phone_number: data.pure_phone_number || '',
           country_code: data.country_code || ''
         })
 
-        // 重新读取后端用户信息
+        // 重新读取后端用户信息，同步最新手机号
         await refetchUser()
 
         Taro.showToast({ title: '手机号已绑定', icon: 'success' })
       } catch (err) {
-        // 后端验证非中国大陆手机号会返回错误
-        const errMsg = (err && (err.message || err.errMsg || '')) || ''
-        if (errMsg.includes('phone') || errMsg.includes('mobile') || errMsg.includes('手机号')) {
-          Taro.showToast({ title: '暂不支持此手机号', icon: 'none' })
-        } else {
-          Taro.showToast({ title: '获取手机号失败', icon: 'none' })
-        }
+        Taro.showToast({ title: '获取手机号失败', icon: 'none' })
       }
     }
 
     // ---- 订单 ----
     const {
       data: orders
-    } = useAppQuery({
+    } = useQuery({
       queryKey: ['orders', 'user-center'],
       queryFn: async () => {
         const response = await listOrders()
@@ -236,9 +232,10 @@ export default {
     // ---- 生命周期 ----
     useDidShow(() => {
       authStore.hydrate()
-      // 刷新本地头像
+      // 重新从本地读取头像（从其他页面返回后）
       avatarUrl.value = Taro.getStorageSync(STORAGE_AVATAR_KEY) || ''
-      // 如果已登录，刷新后端用户信息
+
+      // 如果已登录，重新获取后端用户信息确保手机号最新
       if (authStore.isAuthenticated) {
         refetchUser()
       }
@@ -263,7 +260,9 @@ export default {
         content: '确认退出当前账号吗？',
         success: (result) => {
           if (!result.confirm) return
+
           authStore.clearSession()
+
           void Taro.reLaunch({ url: LOGIN_PAGE })
         }
       })

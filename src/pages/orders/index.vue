@@ -45,14 +45,14 @@
         <view class="order-products">
           <view v-for="(item, itemIndex) in order.items" :key="`${order.id}-${itemIndex}`" class="product-item">
             <view class="product-image">
-              <text v-if="!item.image" class="product-placeholder">📷</text>
-              <image v-else :src="item.image" class="product-img" mode="aspectFill" />
+              <text v-if="!item.product_image" class="product-placeholder">📷</text>
+              <image v-else :src="item.product_image" class="product-img" mode="aspectFill" />
             </view>
             <view class="product-info">
               <text class="product-name">{{ item.product_name || '商品' }}</text>
               <text class="product-desc">{{ item.description || '' }}</text>
               <view class="product-bottom">
-                <text class="product-price">¥{{ (item.price || 0).toFixed(2) }}</text>
+                <text class="product-price">¥{{ Number(item.unit_price || 0).toFixed(2) }}</text>
                 <text class="product-quantity">x{{ item.quantity || 1 }}</text>
               </view>
             </view>
@@ -81,6 +81,7 @@
 <script>
 import { computed, ref } from 'vue'
 import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
+import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, listOrders, cancelOrder } from '@/api/orders'
 import { useAuthStore } from '@/stores/auth'
@@ -210,13 +211,11 @@ export default {
   setup () {
     const authStore = useAuthStore()
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
-    const orders = ref([])
     const activeFilter = ref('all')
-    const isLoading = ref(true)
-    const isFetching = ref(false)
-    const loadError = ref(null)
     const payingOrderId = ref(null)
     const cancellingOrderId = ref(null)
+    const fallbackOrders = ref([])
+    const fallbackError = ref(null)
 
     const tabs = [
       { label: '全部', value: 'all' },
@@ -226,14 +225,68 @@ export default {
       { label: '待评价', value: 'completed' }
     ]
 
-    const isError = computed(() => Boolean(loadError.value))
-    const errorMessage = computed(() => formatQueryError(loadError.value))
+    const {
+      data: orders,
+      isLoading,
+      isFetching,
+      isError,
+      error,
+      refetch
+    } = useAppQuery({
+      queryKey: ['orders'],
+      queryFn: async () => normalizeOrders(await listOrders()),
+      enabled: computed(() => authStore.isAuthenticated)
+    })
+
+    const orderList = computed(() => orders.value || fallbackOrders.value)
+    const hasError = computed(() => isError.value || Boolean(fallbackError.value))
+    const errorMessage = computed(() => formatQueryError(fallbackError.value || error.value))
     const filteredOrders = computed(() => {
       if (activeFilter.value === 'all') {
-        return orders.value
+        return orderList.value
+      }
+      return orderList.value.filter((item) => item.status === activeFilter.value)
+    })
+
+    async function loadOrdersDirect () {
+      console.info('[orders-page] fallback load start')
+      fallbackError.value = null
+      fallbackOrders.value = normalizeOrders(await listOrders())
+      console.info('[orders-page] fallback load success', {
+        count: fallbackOrders.value.length
+      })
+    }
+
+    async function refreshOrders () {
+      fallbackError.value = null
+
+      try {
+        const result = await refetch()
+
+        if (Array.isArray(result.data)) {
+          fallbackOrders.value = []
+          return
+        }
+      } catch (queryError) {
+        fallbackError.value = queryError
       }
 
-      return orders.value.filter((item) => item.status === activeFilter.value)
+      try {
+        await loadOrdersDirect()
+      } catch (directError) {
+        fallbackError.value = directError
+      }
+    }
+
+    const cancelMutation = useAppMutation({
+      mutationFn: (orderId) => cancelOrder(orderId),
+      onSuccess: () => {
+        Taro.showToast({ title: '取消成功', icon: 'success' })
+        void refreshOrders()
+      },
+      onError: (error) => {
+        Taro.showToast({ title: error?.message || '取消失败', icon: 'none' })
+      }
     })
 
     function handleTabChange (tabValue) {
@@ -249,11 +302,7 @@ export default {
           if (res.confirm) {
             cancellingOrderId.value = order.id
             try {
-              await cancelOrder(order.id)
-              Taro.showToast({ title: '取消成功', icon: 'success' })
-              await loadOrders()
-            } catch (error) {
-              Taro.showToast({ title: error?.message || '取消失败', icon: 'none' })
+              await cancelMutation.mutateAsync(order.id)
             } finally {
               cancellingOrderId.value = null
             }
@@ -277,34 +326,11 @@ export default {
       return true
     }
 
-    async function loadOrders () {
-      if (isFetching.value) {
-        return
-      }
-
-      isFetching.value = true
-      loadError.value = null
-
-      if (!orders.value.length) {
-        isLoading.value = true
-      }
-
-      try {
-        const response = await listOrders()
-        orders.value = normalizeOrders(response)
-      } catch (error) {
-        loadError.value = error
-      } finally {
-        isFetching.value = false
-        isLoading.value = false
-      }
-    }
-
     async function confirmOrderPaid (targetOrderId) {
       for (let attempt = 0; attempt < PAYMENT_POLL_MAX_ATTEMPTS; attempt += 1) {
-        await loadOrders()
+        await refreshOrders()
 
-        const latestOrder = orders.value.find((item) => item.id === targetOrderId)
+        const latestOrder = orderList.value.find((item) => item.id === targetOrderId)
 
         if (latestOrder?.status === 'paid') {
           return latestOrder
@@ -319,7 +345,7 @@ export default {
     }
 
     async function handleRetry () {
-      await loadOrders()
+      await refreshOrders()
     }
 
     async function handleOpenDetail (order) {
@@ -378,14 +404,14 @@ export default {
         const isAuthenticated = await ensureAuthenticated()
 
         if (isAuthenticated) {
-          await loadOrders()
+          await refreshOrders()
         }
       })()
     })
 
     usePullDownRefresh(async () => {
       try {
-        await loadOrders()
+        await refreshOrders()
       } finally {
         Taro.stopPullDownRefresh()
       }
@@ -397,10 +423,10 @@ export default {
       handlePayOrder,
       handleRetry,
       filteredOrders,
-      isError,
+      isError: hasError,
       isFetching,
       isLoading,
-      orders,
+      orders: orderList,
       payingOrderId,
       cancellingOrderId,
       skeletonItems,
