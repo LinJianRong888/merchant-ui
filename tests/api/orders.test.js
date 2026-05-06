@@ -23,7 +23,7 @@ describe('orders API', () => {
   })
 
   describe('createSaleOrder', () => {
-    it('单商品下单应发送正确的请求体', async () => {
+    it('单商品下单应发送 items 数组请求体', async () => {
       request.post.mockResolvedValue({
         statusCode: 201,
         data: { id: 1, order_no: 'ORD001', status: 'pending' }
@@ -37,14 +37,13 @@ describe('orders API', () => {
 
       expect(request.post).toHaveBeenCalledWith('/api/v1/orders/', {
         order_type: 'sale',
-        product_id: 1,
-        quantity: 2,
+        items: [{ product_id: 1, quantity: 2 }],
         address: mockAddress
       })
       expect(result).toEqual({ id: 1, order_no: 'ORD001', status: 'pending' })
     })
 
-    it('多商品下单应发送 products 数组', async () => {
+    it('多商品下单应发送 items 数组', async () => {
       request.post.mockResolvedValue({
         statusCode: 201,
         data: { id: 2, order_no: 'ORD002' }
@@ -57,7 +56,7 @@ describe('orders API', () => {
 
       expect(request.post).toHaveBeenCalledWith('/api/v1/orders/', {
         order_type: 'sale',
-        products: [{ product_id: 1, quantity: 2 }, { product_id: 2, quantity: 1 }],
+        items: [{ product_id: 1, quantity: 2 }, { product_id: 2, quantity: 1 }],
         address: mockAddress
       })
       expect(result.id).toBe(2)

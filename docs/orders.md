@@ -53,8 +53,16 @@ Request body:
 ```json
 {
   "order_type": "sale",
-  "product_id": 1,
-  "quantity": 2,
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2
+    },
+    {
+      "product_id": 3,
+      "quantity": 1
+    }
+  ],
   "address": {
     "address_id": 5
   }
@@ -64,11 +72,15 @@ Request body:
 Address field compatibility:
 
 - `address` is optional and defaults to `null` (backward compatible)
+- `items` is required and must contain at least one product item
+- each item requires `product_id` and positive `quantity`
+- duplicate `product_id` entries are merged by service layer before stock check and order-item creation
 - frontend may pass either:
   - address reference DTO: `{ "address_id": <id> }`
   - full address DTO object with user-address fields
 - order service resolves address payload and persists an order-side snapshot into `Order.address`
-- `quantity` participates in amount calculation: `total_amount = unit_price * quantity`
+- each line amount is `unit_price * quantity`
+- order total is the sum of all line amounts across `items`
 
 Response example:
 
@@ -105,6 +117,7 @@ Response example:
     {
       "product_id": 1,
       "product_name": "护眼贴",
+      "product_image": "https://cdn.example.com/products/eye-mask.png",
       "specification": "1Lx12盒/箱",
       "product_mode": "sale",
       "unit_price": "350.00",
@@ -170,7 +183,7 @@ Cancel behavior:
 
 ## Service-Layer Entry Points
 
-- `services.order.create_order(user=..., order_type=..., product_id=..., quantity=...)`
+- `services.order.create_order(user=..., order_type=..., items=[...])`
 - `services.order.cancel_order(user=..., order=...)`
 - `services.order.restore_order_stock(order_id=..., quantity=..., scene=...)`
 - `services.user.resolve_order_address_payload(user=..., address_payload=...)`
@@ -187,7 +200,7 @@ Cancel behavior:
 - `sample` orders are only available to `agent`
 - `sale` orders are only available to `customer`
 - `visitor` may browse merchant-side products but may not create orders
-- Order creation currently handles one product per order in the minimal implementation
+- Order creation now supports multiple product lines per order
 - `address` is optional for order creation to preserve backward compatibility
 - when provided, `address` is validated and normalized by service layer into order snapshot JSON
 - Product stock is deducted from the selected mode profile on successful order creation

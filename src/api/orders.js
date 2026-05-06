@@ -37,23 +37,28 @@ export async function createSaleOrder ({ productId, quantity, products, address 
     throw new Error('地址参数必填')
   }
 
-  const orderData = {
-    order_type: ORDER_TYPE_SALE,
-    address
-  }
+  const items = []
 
   if (products && products.length > 0) {
-    // 多商品模式
-    orderData.products = products.map(p => ({
-      product_id: p.id,
-      quantity: p.quantity
-    }))
+    items.push(...products.map((product) => ({
+      product_id: product.id,
+      quantity: product.quantity
+    })))
   } else if (productId) {
-    // 单商品模式（向后兼容）
-    orderData.product_id = productId
-    orderData.quantity = quantity
-  } else {
+    items.push({
+      product_id: productId,
+      quantity
+    })
+  }
+
+  if (!items.length) {
     throw new Error('商品参数必填')
+  }
+
+  const orderData = {
+    order_type: ORDER_TYPE_SALE,
+    items,
+    address
   }
 
   const response = await request.post('/api/v1/orders/', orderData)
