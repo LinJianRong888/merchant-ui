@@ -1,6 +1,15 @@
 <template>
   <view class="product-detail-page">
-    <view v-if="isLoading" class="detail-skeleton">
+    <EmptyStatePanel
+      v-if="routeResolved && !hasProductId"
+      badge-text="MISSING"
+      title="没有拿到商品信息"
+      description="当前页面缺少商品 id，无法加载详情。你可以返回上一页重新进入。"
+      action-text="返回上一页"
+      @action="handleGoBack"
+    />
+
+    <view v-else-if="isLoading" class="detail-skeleton">
       <view class="detail-skeleton__media"></view>
       <view class="detail-skeleton__line detail-skeleton__line--title"></view>
       <view class="detail-skeleton__line"></view>
@@ -78,6 +87,7 @@ import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppQuery } from '@/utils/app-query'
 
+import EmptyStatePanel from '@/components/EmptyStatePanel.vue'
 import { getSaleProductDetail } from '@/api/products'
 import { useCartStore } from '@/stores/cart'
 import homeIcon from '@/assets/home.png'
@@ -130,12 +140,17 @@ function formatError (error) {
 }
 
 export default {
+  components: {
+    EmptyStatePanel
+  },
+
   setup () {
     const cartStore = useCartStore()
     const productId = ref('')
     const quantity = ref(1)
     const isSubmitting = ref(false)
     const isAddingToCart = ref(false)
+    const routeResolved = ref(false)
 
     const {
       data: product,
@@ -151,6 +166,7 @@ export default {
     })
 
     const errorMessage = computed(() => formatError(error.value))
+    const hasProductId = computed(() => Boolean(productId.value))
     const orderAmountText = computed(() => {
       const unitPrice = Number(product.value?.price)
 
@@ -222,14 +238,23 @@ export default {
       quantity.value = Math.min(99, quantity.value + 1)
     }
 
-    function goHome() {
+    function goHome () {
       Taro.switchTab({
         url: '/pages/home/index'
       })
     }
 
+    function handleGoBack () {
+      Taro.navigateBack({
+        fail: () => {
+          goHome()
+        }
+      })
+    }
+
     useLoad((params) => {
       productId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
+      routeResolved.value = true
       cartStore.hydrate()
     })
 
@@ -243,11 +268,13 @@ export default {
 
     return {
       errorMessage,
+      handleGoBack,
       handleDecreaseQuantity,
       handleIncreaseQuantity,
       handleGoToCart,
       handleAddToCart,
       handlePlaceOrder,
+      hasProductId,
       isError,
       isFetching,
       isLoading,
@@ -257,6 +284,7 @@ export default {
       orderAmountText,
       product,
       quantity,
+      routeResolved,
       cartTotalCount,
       goHome,
       homeIcon,

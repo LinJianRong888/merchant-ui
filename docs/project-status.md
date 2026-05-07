@@ -22,7 +22,7 @@
 - 已对齐 Taro 配置、构建脚本、微信开发者工具配置。
 - 已保留 `@` 到 `src` 的别名。
 - 已启用 Pinia。
-- 已启用 `@tanstack/vue-query`。
+- 已使用本地 composable 接管页面级请求状态。
 
 ### 2.3 文档迁移
 
@@ -140,11 +140,17 @@ src/pages/orders/address-select/
 - `setPhoneNumber(payload)`
 - `clearSession()`
 
-### 3.2 Vue Query
+### 3.2 页面请求状态
 
-`@tanstack/vue-query` 已在应用入口初始化，但当前尚未接入具体业务查询。
+页面级请求状态由 `src/utils/app-query.js` 统一管理。
 
-当前只是为后续服务端状态缓存做准备。
+当前能力包括：
+
+- `useAppQuery()`：提供 `data / isLoading / isFetching / isError / error / refetch`
+- `useAppMutation()`：提供 `mutate / mutateAsync / isPending`
+- 轻量内存缓存与手动失效能力
+
+不再依赖 `@tanstack/vue-query`，以避免小程序页面环境下的 observer 失效问题。
 
 ## 4. 关于精简会话字段的说明
 
@@ -186,7 +192,8 @@ pnpm build:weapp
 - `src/api/miniapp-auth.js`：微信小程序鉴权 API 层
 - `src/api/user-addresses.js`：用户地址管理 API 层
 - `src/stores/auth.js`：纯状态管理的认证 store
-- `src/app.js`：Pinia 与 Vue Query 初始化入口
+- `src/app.js`：Pinia 初始化入口
+- `src/utils/app-query.js`：页面请求状态封装
 - `src/pages/user/addresses/index.vue`：地址管理列表页
 - `src/pages/user/addresses/edit/index.vue`：地址编辑表单页
 - `src/pages/orders/address-select/index.vue`：订单地址选择页

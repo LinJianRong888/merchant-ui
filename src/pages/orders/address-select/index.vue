@@ -1,10 +1,19 @@
 <template>
   <view class="order-confirm-page">
-    <view v-if="isLoading" class="confirm-skeleton">
+    <view v-if="isPageLoading" class="confirm-skeleton">
       <view class="skeleton-address"></view>
       <view class="skeleton-product"></view>
       <view class="skeleton-price"></view>
     </view>
+
+    <EmptyStatePanel
+      v-else-if="pageState"
+      :badge-text="pageState.badgeText"
+      :title="pageState.title"
+      :description="pageState.description"
+      :action-text="pageState.actionText"
+      @action="handlePageStateAction"
+    />
 
     <view v-else class="confirm-content">
       <view class="address-section" @tap="handleSelectAddress">
@@ -76,7 +85,7 @@
       </view>
     </view>
 
-    <view class="bottom-bar">
+    <view v-if="!pageState" class="bottom-bar">
       <view class="bottom-left">
         <text class="bottom-count">共{{ totalQuantity }}件</text>
         <text class="bottom-money">¥{{ totalPrice }}</text>
@@ -91,6 +100,7 @@ import { computed, ref, watch } from 'vue'
 import Taro, { useDidShow, getCurrentInstance } from '@tarojs/taro'
 import { useAppQuery } from '@/utils/app-query'
 
+import EmptyStatePanel from '@/components/EmptyStatePanel.vue'
 import { createOrderPayment, createSaleOrder } from '@/api/orders'
 import { getSaleProductDetail } from '@/api/products'
 import { listUserAddresses } from '@/api/user-addresses'
@@ -167,7 +177,23 @@ function validateCartItems(items) {
   return hasValidQuantity
 }
 
+function buildAddressPayload (address) {
+  return {
+    contact_name: address.contact_name,
+    contact_phone: address.contact_phone,
+    province: address.province,
+    city: address.city,
+    district: address.district,
+    address_detail: address.address_detail,
+    postal_code: address.postal_code
+  }
+}
+
 export default {
+  components: {
+    EmptyStatePanel
+  },
+
   setup() {
     const cartStore = useCartStore()
     const selectedAddressId = ref(null)
@@ -175,6 +201,7 @@ export default {
     const isSubmitting = ref(false)
     const fromCart = ref(false)
     const selectedItemIds = ref([])
+    const pageReady = ref(false)
 
     const pageParams = ref({
       productId: '',
@@ -194,7 +221,10 @@ export default {
 
     const {
       data: product,
-      isLoading: productLoading
+      isLoading: productLoading,
+      isFetching: productFetching,
+      isError: productError,
+      status: productStatus
     } = useAppQuery({
       queryKey: computed(() => ['products', 'detail', pageParams.value.productId]),
       queryFn: async () => {
@@ -207,26 +237,44 @@ export default {
       enabled: computed(() => Boolean(pageParams.value.productId) && !fromCart.value)
     })
 
-    const isLoading = computed(() => addressesLoading.value || productLoading.value)
-
-    // 当地址加载完成后，自动选择默认地址
-    watch(addresses, (newAddresses) => {
-      if (newAddresses && newAddresses.length > 0 && !selectedAddressId.value) {
-        const defaultAddress = newAddresses.find((a) => a.is_default)
-        selectedAddressId.value = defaultAddress?.id || newAddresses[0]?.id || null
+    const orderMode = computed(() => {
+      if (!pageReady.value) {
+        return 'pending'
       }
-    }, { immediate: true })
+
+      if (fromCart.value) {
+        return 'cart'
+      }
+
+      if (pageParams.value.productId) {
+        return 'single'
+      }
+
+      return 'invalid'
+    })
+
+    const isPageLoading = computed(() => {
+      if (!pageReady.value) {
+        return true
+      }
+
+      if (addressesLoading.value) {
+        return true
+      }
+
+      return orderMode.value === 'single' && (productLoading.value || productFetching.value)
+    })
 
     const cartItems = computed(() => {
-      if (fromCart.value) {
+      if (orderMode.value === 'cart') {
         if (selectedItemIds.value.length > 0) {
           return cartStore.cartItems.filter(item => selectedItemIds.value.includes(item.id))
         }
+
         return cartStore.cartItems
       }
-      
-      // 单商品购买模式
-      if (product.value) {
+
+      if (orderMode.value === 'single' && product.value) {
         return [{
           id: product.value.id,
           name: product.value.name,
@@ -236,8 +284,51 @@ export default {
           coverImage: product.value.image || product.value.product_image || ''
         }]
       }
+
       return []
     })
+
+    const pageState = computed(() => {
+      if (!pageReady.value || isPageLoading.value) {
+        return null
+      }
+
+      if (orderMode.value === 'invalid') {
+        return {
+          badgeText: 'MODE',
+          title: '下单参数缺失',
+          description: '当前页面没有识别到单商品或购物车下单模式，请返回上一页重新进入。',
+          actionText: '返回上一页'
+        }
+      }
+
+      if (orderMode.value === 'single' && (productStatus.value === 'error' || (productStatus.value === 'success' && !product.value))) {
+        return {
+          badgeText: 'PRODUCT',
+          title: '商品信息加载失败',
+          description: '当前商品详情未能成功加载，暂时无法提交订单。你可以返回商品页后重新进入。',
+          actionText: '返回上一页'
+        }
+      }
+
+      if (orderMode.value === 'cart' && cartItems.value.length === 0) {
+        return {
+          badgeText: 'CART',
+          title: '没有可结算的商品',
+          description: '当前没有读取到购物车结算项，请先回到购物车勾选商品后再提交订单。',
+          actionText: '前往购物车'
+        }
+      }
+
+      return null
+    })
+
+    watch(addresses, (newAddresses) => {
+      if (newAddresses && newAddresses.length > 0 && !selectedAddressId.value) {
+        const defaultAddress = newAddresses.find((a) => a.is_default)
+        selectedAddressId.value = defaultAddress?.id || newAddresses[0]?.id || null
+      }
+    }, { immediate: true })
 
     const selectedAddress = computed(() => {
       return (addresses.value || []).find((a) => a.id === selectedAddressId.value) || null
@@ -252,19 +343,68 @@ export default {
       return formatPrice(amount)
     })
 
-    // 监听商品变化，如果商品数量或种类少于1则关闭页面
-    watch(cartItems, (newItems) => {
-      const isValid = validateCartItems(newItems)
-      if (!isValid && !isLoading.value) {
-        Taro.showToast({
-          title: '商品数据异常',
-          icon: 'none'
+    function handlePageStateAction () {
+      if (orderMode.value === 'cart') {
+        Taro.switchTab({
+          url: '/pages/cart/index'
         })
-        setTimeout(() => {
-          Taro.navigateBack()
-        }, 1000)
+        return
       }
-    }, { deep: true })
+
+      Taro.navigateBack({
+        fail: () => {
+          Taro.switchTab({
+            url: '/pages/products/index'
+          })
+        }
+      })
+    }
+
+    function getSubmitValidationMessage () {
+      if (pageState.value) {
+        if (orderMode.value === 'cart') {
+          return '请先选择要结算的商品'
+        }
+
+        return '商品信息加载失败'
+      }
+
+      if (isPageLoading.value) {
+        return '页面数据加载中'
+      }
+
+      if (!validateCartItems(cartItems.value)) {
+        return orderMode.value === 'cart' ? '请先选择要结算的商品' : '商品数据异常'
+      }
+
+      if (!selectedAddress.value) {
+        return '请选择收货地址'
+      }
+
+      return ''
+    }
+
+    function buildOrderRequestPayload () {
+      const addressPayload = buildAddressPayload(selectedAddress.value)
+
+      if (orderMode.value === 'cart') {
+        return {
+          products: cartItems.value.map((item) => ({
+            id: item.id,
+            quantity: item.quantity
+          })),
+          address: addressPayload,
+          remark: remark.value
+        }
+      }
+
+      return {
+        productId: pageParams.value.productId,
+        quantity: pageParams.value.quantity,
+        address: addressPayload,
+        remark: remark.value
+      }
+    }
 
     function handleSelectAddress () {
       Taro.navigateTo({
@@ -308,56 +448,17 @@ export default {
     }
 
     async function handleSubmitOrder () {
-      const isValid = validateCartItems(cartItems.value)
-      if (!isValid) {
-        Taro.showToast({ title: '商品数据异常', icon: 'none' })
-        return
-      }
+      const validationMessage = getSubmitValidationMessage()
 
-      if (!selectedAddressId.value || (!fromCart.value && !pageParams.value.productId) || (fromCart.value && !cartItems.value.length)) {
-        Taro.showToast({ title: '请选择收货地址', icon: 'none' })
+      if (validationMessage) {
+        Taro.showToast({ title: validationMessage, icon: 'none' })
         return
       }
 
       isSubmitting.value = true
 
       try {
-        const selectedAddr = (addresses.value || []).find((a) => a.id === selectedAddressId.value)
-
-        let order
-        if (fromCart.value) {
-          order = await createSaleOrder({
-            products: cartItems.value.map(item => ({
-              id: item.id,
-              quantity: item.quantity
-            })),
-            address: {
-              contact_name: selectedAddr.contact_name,
-              contact_phone: selectedAddr.contact_phone,
-              province: selectedAddr.province,
-              city: selectedAddr.city,
-              district: selectedAddr.district,
-              address_detail: selectedAddr.address_detail,
-              postal_code: selectedAddr.postal_code
-            },
-            remark: remark.value
-          })
-        } else {
-          order = await createSaleOrder({
-            productId: pageParams.value.productId,
-            quantity: pageParams.value.quantity,
-            address: {
-              contact_name: selectedAddr.contact_name,
-              contact_phone: selectedAddr.contact_phone,
-              province: selectedAddr.province,
-              city: selectedAddr.city,
-              district: selectedAddr.district,
-              address_detail: selectedAddr.address_detail,
-              postal_code: selectedAddr.postal_code
-            },
-            remark: remark.value
-          })
-        }
+        const order = await createSaleOrder(buildOrderRequestPayload())
 
         const paymentPayload = await createOrderPayment(order.id)
         await invokeWechatPayment(paymentPayload)
@@ -384,6 +485,8 @@ export default {
     }
 
     useDidShow(async () => {
+      pageReady.value = false
+
       const params = getCurrentInstance()?.router?.params || {}
 
       fromCart.value = params.fromCart === 'true' || params.fromCart === true
@@ -406,25 +509,22 @@ export default {
         }
       }
 
-      // 页面加载完成后校验商品数据
-      const isValid = validateCartItems(cartItems.value)
-      if (!isValid) {
-        Taro.showToast({ title: '商品数据异常', icon: 'none' })
-        setTimeout(() => { Taro.navigateBack() }, 1000)
-      }
+      pageReady.value = true
     })
 
     return {
       addresses,
       cartItems,
       formatFullAddress,
+      handlePageStateAction,
       handleDecreaseQuantity,
       handleIncreaseQuantity,
       handleRemarkInput,
       handleSelectAddress,
       handleSubmitOrder,
       isSubmitting,
-      isLoading,
+      isPageLoading,
+      pageState,
       product,
       remark,
       selectedAddress,

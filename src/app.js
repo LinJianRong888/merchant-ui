@@ -1,10 +1,8 @@
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { VueQueryPlugin } from '@tanstack/vue-query'
 
 import { useAuthStore } from '@/stores/auth'
-import { queryClient } from '@/query-client'
 
 import './app.scss'
 
@@ -24,8 +22,5 @@ const authStore = useAuthStore(pinia)
 authStore.hydrate()
 
 App.use(pinia)
-App.use(VueQueryPlugin, {
-  queryClient
-})
 
 export default App

@@ -16,7 +16,6 @@
 | Vue | 3.5.30 | 前端 UI 框架 |
 | NutUI Taro | 4.3.14 | UI 组件库（已安装但当前页面未使用） |
 | Pinia | 3.0.4 | 状态管理（认证、购物车） |
-| @tanstack/vue-query | 5.90.3 | 服务端状态管理（已初始化但**未实际使用**） |
 | Sass | 1.75.0 | CSS 预处理器 |
 | Vite | 4.2.0 | 构建工具（Taro 编译模式） |
 | pnpm | - | 包管理器 |
@@ -49,7 +48,7 @@ merchant-ui/
 │
 ├── src/                       # 源代码
 │   ├── app.config.js          # 小程序全局配置（页面路由、tabBar）
-│   ├── app.js                 # 应用入口（Pinia、VueQuery 初始化）
+│   ├── app.js                 # 应用入口（Pinia 初始化）
 │   ├── app.scss               # 全局样式
 │   ├── index.html             # H5 入口 HTML
 │   │
@@ -86,6 +85,7 @@ merchant-ui/
 │   │   └── cart.js            # 购物车状态
 │   │
 │   └── utils/                 # 工具函数
+│       ├── app-query.js       # 页面请求状态封装（data/loading/error/refetch）
 │       ├── request.js         # HTTP 请求封装（自动鉴权、401 处理）
 │       └── location.js        # 地址编码转换工具
 │
@@ -145,17 +145,9 @@ merchant-ui/
 
 ### 4.1 请求层 (`src/utils/request.js`) — 核心请求封装
 
-> 本项目**没有使用 `@tanstack/vue-query` 来发送请求**，所有 HTTP 请求都通过自定义封装的 `request` 工具发出。
+> 本项目的 HTTP 请求统一通过自定义 `request` 工具发出，页面级加载状态由 `src/utils/app-query.js` 中的本地 composable 管理。
 >
-> 💡 **关于 Vue Query 与 Taro.request 的兼容性说明**：`@tanstack/vue-query` 的 `useQuery` / `useMutation` 只负责**状态管理**（缓存、加载态、错误态、重试等），它通过 `queryFn` 参数接受任何异步函数作为请求源。因此完全可以这样结合使用：
-> ```javascript
-> // ✅ 完全可行 — queryFn 内使用 Taro.request 或封装的 request 工具
-> const { data, isLoading } = useQuery({
->   queryKey: ['products'],
->   queryFn: () => request.get('/api/v1/products/', { data: { mode: 'sale' } })
-> })
-> ```
-> 这样既保留了 Taro 的跨端能力，又享受了 Vue Query 的缓存/重试/状态管理优势。当前项目只是尚未接入，并非不能结合。
+> 当前不再依赖 `@tanstack/vue-query`。原因是小程序页面生命周期与桥接运行时下，声明式 query observer 的稳定性不足；相比之下，本地请求层更容易保证 `data / loading / error / refetch` 在页面中行为一致。
 
 #### 设计思路
 
@@ -287,7 +279,7 @@ function ensureSuccessResponse(response, fallbackMessage, requestMeta) {
 
 #### Vue Query
 
-- 已在 `app.js` 中初始化 `QueryClient` 并注册 `VueQueryPlugin`
+- `app.js` 仅初始化 Pinia 和应用级登录态恢复
 - 当前**未实际使用**，仅为后续服务端状态缓存做准备
 
 ### 4.4 公共组件
@@ -388,7 +380,7 @@ function ensureSuccessResponse(response, fallbackMessage, requestMeta) {
 
 1. **购物车使用本地存储**：购物车数据存储在 `Taro.setStorageSync('cart_items', ...)`，非服务端存储，切换设备会丢失。
 2. **NutUI 已安装但未使用**：`@nutui/nutui-taro` 在 `package.json` 中作为依赖，但当前页面均使用 Taro 原生组件，未使用 NutUI 组件。
-3. **Vue Query 已初始化但未使用**：`@tanstack/vue-query` 已注册但未接入具体业务查询。
+3. **页面请求状态已本地化**：页面统一通过 `src/utils/app-query.js` 管理请求状态，不再依赖第三方 query observer。
 4. **无 TypeScript**：项目使用纯 JavaScript，无 TypeScript 配置。
 5. **app_slug 固定值**：微信小程序鉴权的 `app_slug` 固定为 `merchant-miniapp`。
 6. **页面样式独立**：每个页面有自己的 `index.scss`，通过 `import './index.scss'` 引入。
