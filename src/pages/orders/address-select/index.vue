@@ -467,7 +467,7 @@ export default {
 
           if (paidOrder?.status === 'paid') {
             if (fromCart.value && selectedItemIds.value.length > 0) {
-              await Promise.all(selectedItemIds.value.map((id) => cartStore.removeItem(id).catch(() => {})))
+              await Promise.all(selectedItemIds.value.map((id) => cartStore.removeItem(id).catch((err) => console.warn('[order-confirm] removeItem error', err))))
               selectedItemIds.value = []
             }
             Taro.showToast({ title: '支付成功', icon: 'success' })
@@ -481,13 +481,11 @@ export default {
           console.warn('[order-confirm] payment not completed, order exists', paymentError?.message || paymentError)
         }
 
-        await sleep(1500)
         await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
       } catch (error) {
         console.error('[order-confirm] order creation failed', error)
         Taro.showToast({ title: error?.message || '订单创建失败', icon: 'none' })
 
-        await sleep(1500)
         await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
       } finally {
         isSubmitting.value = false

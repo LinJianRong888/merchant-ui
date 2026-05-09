@@ -13,69 +13,141 @@
       <text class="detail-state-panel__title">加载失败</text>
       <text class="detail-state-panel__desc">{{ errorMessage }}</text>
       <button class="detail-state-panel__button" :loading="isFetching" @tap="refetch">重试</button>
-
     </view>
 
     <view v-else-if="order" class="detail-shell">
-      <view class="detail-status-card">
-        <view class="detail-status-card__header">
-          <view class="detail-status-card__order-info">
-            <text class="detail-status-card__order-no">{{ order.order_no || '--' }}</text>
-            <text class="detail-status-card__time">{{ createdAtText }}</text>
-          </view>
-          <text :class="['detail-status-card__badge', statusMeta.className]">{{ statusMeta.label }}</text>
+      <view class="detail-card">
+        <view class="detail-card__header">
+          <text class="detail-card__title">订单信息</text>
+          <text :class="['detail-badge', statusMeta.className]">{{ statusMeta.label }}</text>
         </view>
-        <text class="detail-status-card__type">{{ orderTypeLabel }}</text>
+        <view class="detail-info-grid">
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">订单编号</text>
+            <text class="detail-info-item__value">{{ order.order_no || '--' }}</text>
+          </view>
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">订单类型</text>
+            <text class="detail-info-item__value">{{ orderTypeLabel }}</text>
+          </view>
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">下单时间</text>
+            <text class="detail-info-item__value">{{ createdAtText }}</text>
+          </view>
+          <view v-if="order.paid_at" class="detail-info-item">
+            <text class="detail-info-item__label">支付时间</text>
+            <text class="detail-info-item__value">{{ formatDateTime(order.paid_at) }}</text>
+          </view>
+          <view v-if="order.shipment_status === 'shipped'" class="detail-info-item">
+            <text class="detail-info-item__label">发货状态</text>
+            <text class="detail-info-item__value is-highlight">已发货</text>
+          </view>
+        </view>
       </view>
 
-      <view class="detail-section">
-        <text class="detail-section__title">商品信息</text>
-        <view class="detail-items">
-          <view v-for="(item, idx) in orderItems" :key="idx" class="detail-item">
-            <view class="detail-item__header">
-              <text class="detail-item__name">{{ item.product_name || '商品' }}</text>
-              <text class="detail-item__qty">x{{ item.quantity }}</text>
+      <view class="detail-card">
+        <text class="detail-card__title">商品信息</text>
+        <view class="detail-products">
+          <view v-for="(item, idx) in orderItems" :key="idx" class="detail-product">
+            <view class="detail-product__image">
+              <text v-if="!item.product_image" class="detail-product__placeholder">📷</text>
+              <image v-else :src="item.product_image" class="detail-product__img" mode="aspectFill" />
             </view>
-            <view class="detail-item__meta-row">
-              <text v-if="item.specification" class="detail-item__meta">规格 {{ item.specification }}</text>
-            
+            <view class="detail-product__info">
+              <text class="detail-product__name">{{ item.product_name || '商品' }}</text>
+              <text v-if="item.specification" class="detail-product__spec">{{ item.specification }}</text>
+              <view class="detail-product__row">
+                <text class="detail-product__price">¥{{ formatItemPrice(item.unit_price) }}</text>
+                <text class="detail-product__qty">×{{ item.quantity }}</text>
+                <text class="detail-product__subtotal">小计 ¥{{ formatItemSubtotal(item) }}</text>
+              </view>
             </view>
           </view>
         </view>
       </view>
 
-      <view class="detail-section">
-        <text class="detail-section__title">金额明细</text>
+      <view class="detail-card">
+        <text class="detail-card__title">金额明细</text>
         <view class="detail-amounts">
           <view class="detail-amounts__row">
-            <text class="detail-amounts__label">订单金额</text>
+            <text class="detail-amounts__label">运费</text>
+            <text class="detail-amounts__value is-muted">免运费</text>
+          </view>
+          <view class="detail-amounts__row detail-amounts__row--total">
+            <text class="detail-amounts__label">实付款</text>
             <text class="detail-amounts__value">{{ formatPrice(order.total_amount) }}</text>
-          </view>
-          <view class="detail-amounts__row">
-            <text class="detail-amounts__label">已支付</text>
-            <text class="detail-amounts__value is-muted">{{ formatPrice(order.paid_amount) }}</text>
-          </view>
-          <view v-if="order.paid_at" class="detail-amounts__row">
-            <text class="detail-amounts__label">支付时间</text>
-            <text class="detail-amounts__value is-muted">{{ formatDateTime(order.paid_at) }}</text>
           </view>
         </view>
       </view>
 
-      <view v-if="orderAddress" class="detail-section">
-        <text class="detail-section__title">收货地址</text>
+      <view class="detail-card">
+        <text class="detail-card__title">收货地址</text>
         <view class="detail-address">
-          <view class="detail-address__contact">
-            <text class="detail-address__name">{{ orderAddress.contact_name }}</text>
-            <text class="detail-address__phone">{{ orderAddress.contact_phone }}</text>
+          <view class="detail-address__row">
+            <text class="detail-address__label">联系人</text>
+            <text class="detail-address__value">{{ orderAddress?.contact_name || '--' }}</text>
           </view>
-          <text class="detail-address__full">{{ fullAddressText }}</text>
+          <view class="detail-address__row">
+            <text class="detail-address__label">联系电话</text>
+            <text class="detail-address__value">{{ orderAddress?.contact_phone || '--' }}</text>
+          </view>
+          <view class="detail-address__row">
+            <text class="detail-address__label">收货地址</text>
+            <text class="detail-address__value">{{ fullAddressText || '--' }}</text>
+          </view>
+          <view v-if="orderAddress?.postal_code" class="detail-address__row">
+            <text class="detail-address__label">邮政编码</text>
+            <text class="detail-address__value">{{ orderAddress.postal_code }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="detail-card">
+        <text class="detail-card__title">物流轨迹</text>
+        <view class="detail-timeline">
+          <view :class="['timeline-item', { active: isTimelineActive('created') }]">
+            <view class="timeline-item__dot"></view>
+            <view class="timeline-item__content">
+              <text class="timeline-item__title">订单已创建</text>
+              <text class="timeline-item__time">{{ createdAtText }}</text>
+              <text class="timeline-item__desc">订单已提交，等待付款</text>
+            </view>
+          </view>
+          <view v-if="isTimelineActive('paid')" :class="['timeline-item', { active: isTimelineActive('paid') }]">
+            <view class="timeline-item__dot"></view>
+            <view class="timeline-item__content">
+              <text class="timeline-item__title">买家已付款</text>
+              <text v-if="order.paid_at" class="timeline-item__time">{{ formatDateTime(order.paid_at) }}</text>
+              <text class="timeline-item__desc">订单已支付，等待商家发货</text>
+            </view>
+          </view>
+          <view v-if="isTimelineActive('shipped')" :class="['timeline-item', { active: isTimelineActive('shipped') }]">
+            <view class="timeline-item__dot"></view>
+            <view class="timeline-item__content">
+              <text class="timeline-item__title">商家已发货</text>
+              <text v-if="order.shipment_status === 'shipped'" class="timeline-item__time">已发货</text>
+              <text class="timeline-item__desc">包裹运输中，请注意查收</text>
+            </view>
+          </view>
+          <view v-if="isTimelineActive('completed')" :class="['timeline-item', { active: isTimelineActive('completed') }]">
+            <view class="timeline-item__dot"></view>
+            <view class="timeline-item__content">
+              <text class="timeline-item__title">订单已完成</text>
+              <text class="timeline-item__desc">订单已签收，交易完成</text>
+            </view>
+          </view>
         </view>
       </view>
 
       <view v-if="order.status === 'pending'" class="detail-footer">
         <button class="detail-cancel-button" :loading="isCancelling" @tap="handleCancel">取消订单</button>
         <button class="detail-pay-button" :loading="isPaying" @tap="handlePay">继续支付</button>
+      </view>
+
+      <view v-else-if="order.status !== 'cancelled' && order.status !== 'closed'" class="detail-footer">
+        <button class="detail-action-btn detail-action-btn--after-sale" @tap="handleApplyAfterSale">申请售后</button>
+        <button class="detail-action-btn detail-action-btn--service" @tap="handleContactService">咨询客服</button>
+        <button class="detail-action-btn detail-action-btn--logistics" @tap="handleViewLogistics">查看物流</button>
       </view>
     </view>
   </view>
@@ -86,7 +158,8 @@ import { computed, ref } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
-import { createOrderPayment, getOrderDetail, listOrders, cancelOrder } from '@/api/orders'
+import { createOrderPayment, getOrderDetail, listOrders, cancelOrder, getOrderTracking } from '@/api/orders'
+import { listSaleProducts } from '@/api/products'
 
 import './index.scss'
 
@@ -116,11 +189,11 @@ function formatDateTime (value) {
   return `${y.join('.')} ${t.join(':')}`
 }
 
-function getStatusMeta (status) {
+function getStatusMeta (status, shipmentStatus) {
+  if (shipmentStatus === 'shipped') return { label: '已发货', className: 'is-paid' }
   if (status === 'paid') return { label: '已支付', className: 'is-paid' }
   if (status === 'pending') return { label: '待支付', className: 'is-pending' }
   if (status === 'cancelled' || status === 'closed') return { label: '已取消', className: 'is-cancelled' }
-  if (status === 'shipped') return { label: '已发货', className: 'is-paid' }
   if (status === 'completed') return { label: '已完成', className: 'is-paid' }
   return { label: status || '状态待同步', className: 'is-neutral' }
 }
@@ -135,6 +208,59 @@ function getOrderTypeLabel (orderType) {
 
 function formatFullAddress (address) {
   return [address.province, address.city, address.district, address.address_detail].filter(Boolean).join(' ')
+}
+
+function buildProductPriceMap (products) {
+  const map = {}
+  if (!Array.isArray(products)) return map
+  products.forEach((p) => {
+    if (p?.id != null) {
+      const price = Number(p.price || 0)
+      map[p.id] = price
+      map[String(p.id)] = price
+    }
+  })
+  return map
+}
+
+function enrichOrderItems (order, priceMap) {
+  if (!order?.items || !Array.isArray(order.items)) return order
+  const enrichedItems = order.items.map((it) => {
+    const quantity = Number(it.quantity || 0)
+    const lineAmount = Number(it.line_amount || 0)
+    const unitPrice = Number(it.unit_price || (priceMap[String(it.product_id)] || priceMap[Number(it.product_id)] || 0))
+
+    return {
+      ...it,
+      unit_price: unitPrice || it.unit_price,
+      line_amount: lineAmount || unitPrice * quantity
+    }
+  })
+  return { ...order, items: enrichedItems }
+}
+
+function formatItemPrice (price) {
+  const value = Number(price)
+  if (Number.isFinite(value) && value > 0) {
+    return value.toFixed(2)
+  }
+  return '0.00'
+}
+
+function formatItemSubtotal (item) {
+  const lineAmount = Number(item?.line_amount || 0)
+  if (lineAmount > 0) return lineAmount.toFixed(2)
+  const unitPrice = Number(item?.unit_price || 0)
+  const quantity = Number(item?.quantity || 0)
+  return (unitPrice * quantity).toFixed(2)
+}
+
+function getTimelineStep (order) {
+  if (order?.status === 'cancelled' || order?.status === 'closed') return 'cancelled'
+  if (order?.status === 'completed') return 'completed'
+  if (order?.shipment_status === 'shipped') return 'shipped'
+  if (order?.status === 'paid') return 'paid'
+  return 'created'
 }
 
 function formatQueryError (error) {
@@ -162,12 +288,17 @@ export default {
     } = useAppQuery({
       queryKey: computed(() => ['orders', 'detail', orderId.value]),
       queryFn: async () => {
+        const products = await listSaleProducts().catch(() => [])
+        const priceMap = buildProductPriceMap(products)
+
         try {
-          return await getOrderDetail(orderId.value)
+          const detail = await getOrderDetail(orderId.value)
+          return enrichOrderItems(detail, priceMap)
         } catch {
           const list = await listOrders()
           if (Array.isArray(list)) {
-            return list.find((item) => String(item?.id) === String(orderId.value)) || null
+            const found = list.find((item) => String(item?.id) === String(orderId.value)) || null
+            return found ? enrichOrderItems(found, priceMap) : null
           }
           return null
         }
@@ -177,11 +308,20 @@ export default {
 
     const errorMessage = computed(() => formatQueryError(error.value))
     const createdAtText = computed(() => formatDateTime(order.value?.created_at))
-    const statusMeta = computed(() => getStatusMeta(order.value?.status))
+    const statusMeta = computed(() => getStatusMeta(order.value?.status, order.value?.shipment_status))
     const orderTypeLabel = computed(() => getOrderTypeLabel(order.value?.order_type))
     const orderItems = computed(() => (Array.isArray(order.value?.items) ? order.value.items : []))
     const orderAddress = computed(() => order.value?.address || null)
     const fullAddressText = computed(() => orderAddress.value ? formatFullAddress(orderAddress.value) : '')
+
+    const timelineStep = computed(() => getTimelineStep(order.value))
+
+    function isTimelineActive (step) {
+      const steps = ['created', 'paid', 'shipped', 'completed']
+      const currentIndex = steps.indexOf(timelineStep.value)
+      const stepIndex = steps.indexOf(step)
+      return stepIndex <= currentIndex
+    }
 
     const cancelMutation = useAppMutation({
       mutationFn: () => cancelOrder(orderId.value),
@@ -243,6 +383,40 @@ export default {
       })
     }
 
+    function handleApplyAfterSale () {
+      Taro.showToast({ title: '售后功能接入中', icon: 'none' })
+    }
+
+    function handleContactService () {
+      Taro.showToast({ title: '客服功能接入中', icon: 'none' })
+    }
+
+    function handleViewLogistics () {
+      if (!order.value?.id) return
+      Taro.showLoading({ title: '查询中...' })
+      getOrderTracking(order.value.id).then((tracking) => {
+        Taro.hideLoading()
+        const courier = tracking?.courier_company?.name || '--'
+        const trackingNo = tracking?.tracking_no || '--'
+        const traces = tracking?.traces || []
+        const latestTrace = traces.length > 0 ? traces[traces.length - 1] : null
+        const content = [
+          `快递：${courier}`,
+          `单号：${trackingNo}`,
+          latestTrace ? `最新：${latestTrace.time} ${latestTrace.status}` : ''
+        ].filter(Boolean).join('\n')
+
+        Taro.showModal({
+          title: '物流信息',
+          content,
+          showCancel: false
+        })
+      }).catch((err) => {
+        Taro.hideLoading()
+        Taro.showToast({ title: err?.message || '查询失败', icon: 'none' })
+      })
+    }
+
     useLoad((params) => {
       orderId.value = params?.id || getCurrentInstance()?.router?.params?.id || ''
     })
@@ -261,18 +435,25 @@ export default {
       errorMessage,
       formatDateTime,
       formatPrice,
+      formatItemPrice,
+      formatItemSubtotal,
       fullAddressText,
       handleCancel,
       handlePay,
+      handleApplyAfterSale,
+      handleContactService,
+      handleViewLogistics,
       isCancelling,
       isError,
       isFetching,
       isLoading,
       isPaying,
+      isTimelineActive,
       order,
       orderAddress,
       orderItems,
       orderTypeLabel,
+      refetch,
       statusMeta
     }
   }

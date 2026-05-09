@@ -71,7 +71,7 @@
         </view>
 
         <view v-if="order.canPay" class="countdown-tip">
-          14:10后自动取消
+          {{ formatCountdown(order) }}
         </view>
       </view>
     </view>
@@ -79,7 +79,7 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
@@ -143,7 +143,11 @@ function formatDateTime (value) {
   return `${parts.join('.')} ${time.join(':')}`
 }
 
-function getStatusMeta (status) {
+function getStatusMeta (status, shipmentStatus) {
+  if (shipmentStatus === 'shipped') {
+    return { label: '已发货', className: 'is-paid', canPay: false }
+  }
+
   if (status === 'paid') {
     return { label: '已支付', className: 'is-paid', canPay: false }
   }
@@ -154,10 +158,6 @@ function getStatusMeta (status) {
 
   if (status === 'cancelled' || status === 'closed') {
     return { label: '已取消', className: 'is-cancelled', canPay: false }
-  }
-
-  if (status === 'shipped') {
-    return { label: '已发货', className: 'is-paid', canPay: false }
   }
 
   if (status === 'completed') {
@@ -177,7 +177,7 @@ function normalizeOrders (items, productPriceMap) {
   return [...items]
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
-      const statusMeta = getStatusMeta(item?.status)
+      const statusMeta = getStatusMeta(item?.status, item?.shipment_status)
       const orderItems = Array.isArray(item?.items) ? item.items : []
       const totalAmount = Number(item?.total_amount || 0)
       const totalQuantity = orderItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
@@ -307,6 +307,17 @@ export default {
     const cancellingOrderId = ref(null)
     const fallbackOrders = ref([])
     const fallbackError = ref(null)
+    const now = ref(Date.now())
+
+    let countdownTimer = null
+    onMounted(() => {
+      countdownTimer = setInterval(() => {
+        now.value = Date.now()
+      }, 1000)
+    })
+    onUnmounted(() => {
+      if (countdownTimer) clearInterval(countdownTimer)
+    })
 
     const tabs = [
       { label: '全部', value: 'all' },
@@ -335,6 +346,12 @@ export default {
     const filteredOrders = computed(() => {
       if (activeFilter.value === 'all') {
         return orderList.value
+      }
+      if (activeFilter.value === 'shipped') {
+        return orderList.value.filter((item) => item.shipment_status === 'shipped')
+      }
+      if (activeFilter.value === 'paid') {
+        return orderList.value.filter((item) => item.status === 'paid' && item.shipment_status !== 'shipped')
       }
       return orderList.value.filter((item) => item.status === activeFilter.value)
     })
@@ -508,6 +525,17 @@ export default {
       }
     })
 
+    function formatCountdown (order) {
+      if (!order?.created_at) return '14:10后自动取消'
+      const created = new Date(order.created_at).getTime()
+      const expireAt = created + 15 * 60 * 1000
+      const remaining = expireAt - now.value
+      if (remaining <= 0) return '订单即将取消'
+      const minutes = Math.floor(remaining / 60000)
+      const seconds = Math.floor((remaining % 60000) / 1000)
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}后自动取消`
+    }
+
     return {
       errorMessage,
       handleOpenDetail,
@@ -524,7 +552,8 @@ export default {
       tabs,
       activeFilter,
       handleTabChange,
-      handleCancelOrder
+      handleCancelOrder,
+      formatCountdown
     }
   }
 }

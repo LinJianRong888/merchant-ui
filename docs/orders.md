@@ -41,6 +41,60 @@ List response rules:
 - list endpoint returns a compact order payload instead of full order detail
 - each `item` includes product snapshot basics for list rendering: `product_id`, `product_name`, `product_image`, `quantity`
 - `product_image` is stored as order-item snapshot at order creation time and may be blank
+- `status` is order payment/lifecycle state, while `shipment_status` is shipment progress state
+- list endpoint does not return `address`; address is only returned by order detail API
+
+### `GET /api/v1/orders/<order_id>/`
+
+- Purpose: query the current authenticated user's order detail
+- Authentication: JWT Bearer token required
+- Permission: authenticated users only, and only the current order owner may query
+
+Response example:
+
+```json
+{
+  "id": 10,
+  "order_no": "SL1234567890ABCDEF1234",
+  "order_type": "sale",
+  "buyer_user_id": 8,
+  "app_slug": "merchant-miniapp",
+  "address": {
+    "source": "user_address",
+    "address_id": 5,
+    "contact_name": "张三",
+    "contact_phone": "13800138000",
+    "province": "广东省",
+    "city": "广州市",
+    "district": "天河区",
+    "address_detail": "体育西路 100 号",
+    "postal_code": "510000"
+  },
+  "wxpay_account_slug": "",
+  "payment_prepay_id": "",
+  "wxpay_transaction_id": "",
+  "status": "pending",
+  "shipment_status": "unshipped",
+  "total_amount": "700.00",
+  "paid_amount": "0.00",
+  "paid_at": null,
+  "payment_notified_at": null,
+  "created_at": "2026-04-13T10:00:00+08:00",
+  "updated_at": "2026-04-13T10:00:00+08:00",
+  "items": [
+    {
+      "product_id": 1,
+      "product_name": "护眼贴",
+      "product_image": "https://cdn.example.com/products/eye-mask.png",
+      "specification": "1Lx12盒/箱",
+      "product_mode": "sale",
+      "unit_price": "350.00",
+      "quantity": 2,
+      "line_amount": "700.00"
+    }
+  ]
+}
+```
 
 ### `POST /api/v1/orders/`
 
@@ -91,17 +145,6 @@ Response example:
   "order_type": "sale",
   "buyer_user_id": 8,
   "app_slug": "merchant-miniapp",
-  "address": {
-    "source": "user_address",
-    "address_id": 5,
-    "contact_name": "张三",
-    "contact_phone": "13800138000",
-    "province": "广东省",
-    "city": "广州市",
-    "district": "天河区",
-    "address_detail": "体育西路 100 号",
-    "postal_code": "510000"
-  },
   "wxpay_account_slug": "",
   "payment_prepay_id": "",
   "wxpay_transaction_id": "",
@@ -127,6 +170,11 @@ Response example:
   ]
 }
 ```
+
+Create response rules:
+
+- create response does not return `address`
+- if frontend needs address snapshot after creation, query `GET /api/v1/orders/<order_id>/`
 
 ### `POST /api/v1/orders/<order_id>/pay/`
 
@@ -170,7 +218,32 @@ Response example:
 {
   "id": 10,
   "order_no": "SL1234567890ABCDEF1234",
-  "status": "cancelled"
+  "order_type": "sale",
+  "buyer_user_id": 8,
+  "app_slug": "merchant-miniapp",
+  "wxpay_account_slug": "",
+  "payment_prepay_id": "",
+  "wxpay_transaction_id": "",
+  "status": "cancelled",
+  "shipment_status": "unshipped",
+  "total_amount": "700.00",
+  "paid_amount": "0.00",
+  "paid_at": null,
+  "payment_notified_at": null,
+  "created_at": "2026-04-13T10:00:00+08:00",
+  "updated_at": "2026-04-13T10:00:00+08:00",
+  "items": [
+    {
+      "product_id": 1,
+      "product_name": "护眼贴",
+      "product_image": "https://cdn.example.com/products/eye-mask.png",
+      "specification": "1Lx12盒/箱",
+      "product_mode": "sale",
+      "unit_price": "350.00",
+      "quantity": 2,
+      "line_amount": "700.00"
+    }
+  ]
 }
 ```
 
@@ -180,6 +253,54 @@ Cancel behavior:
 - only `pending` orders may be cancelled
 - cancellation sends an async stock-restore message through order signal handlers
 - stock-restore task payload includes `order_id`, `quantity`, and `scene`
+- cancel response does not return `address`
+
+### `GET /api/v1/orders/<order_id>/tracking/`
+
+- Purpose: query the current authenticated user's shipment tracking progress for a shipped order
+- Authentication: JWT Bearer token required
+- Permission: authenticated users only, and only the current order owner may query
+- Upstream provider: KuaiDi100 query API
+
+Response example:
+
+```json
+{
+  "order_id": 10,
+  "order_no": "SL1234567890ABCDEF1234",
+  "status": "paid",
+  "shipment_status": "shipped",
+  "tracking_no": "SF1234567890",
+  "shipped_at": "2026-05-09T12:00:00+08:00",
+  "courier_company": {
+    "id": 1,
+    "name": "顺丰速运",
+    "kuaidi100_code": "shunfeng"
+  },
+  "provider": "kuaidi100",
+  "provider_status": "200",
+  "provider_message": "ok",
+  "state": "5",
+  "state_label": "out_for_delivery",
+  "is_signed": false,
+  "traces": [
+    {
+      "time": "2026-05-09 12:00:00",
+      "status": "快件已到达派送点",
+      "area_code": "CN440305000000",
+      "area_name": "广东省深圳市南山区"
+    }
+  ]
+}
+```
+
+Tracking query rules:
+
+- only orders with `shipment_status=shipped` may query logistics progress
+- tracking query requires an active `OrderShipment` record and non-empty `tracking_no`
+- tracking query is resolved by `order_id`; frontend does not need to know courier code or upstream signing details
+- `CourierCompany.kuaidi100_code` must be maintained before upstream query can succeed
+- `state` is the raw KuaiDi100 shipment state code, and `state_label` is the backend-normalized semantic label for frontend display
 
 ## Service-Layer Entry Points
 
@@ -191,6 +312,8 @@ Cancel behavior:
 - `services.order.mark_order_paid(order=..., paid_amount=..., paid_at=...)`
 - `services.order.close_order(order=..., reason=...)`
 - `services.order.confirm_order_shipment(order=..., operator=...)`
+- `services.logistics.get_order_tracking(user=..., order=...)`
+- `services.logistics.query_kuaidi100_tracking(courier_code=..., tracking_no=...)`
 - `services.order.create_order_wechat_prepay(user=..., order=...)`
 - `services.order.handle_order_wechat_notify(account_slug=..., headers=..., body=...)`
 - `orders.tasks.restore_order_stock_task(order_id=..., quantity=..., scene=...)`
@@ -218,4 +341,6 @@ Cancel behavior:
 - current shipment status values are `unshipped` and `shipped`
 - shipment confirmation currently creates one shipment record per order
 - shipment rollback currently marks shipment record as rolled back (`rollback=true`, `rollback_at`) and resets order `shipment_status` to `unshipped`
+- logistics query currently uses KuaiDi100 through an isolated service wrapper under `services/logistics/`
+- `CourierCompany` now stores `kuaidi100_code` for upstream courier-code mapping
 - stock restore task validates message payload against the order's aggregated item quantity before applying inventory changes

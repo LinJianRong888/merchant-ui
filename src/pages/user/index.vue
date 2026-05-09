@@ -229,9 +229,9 @@ export default {
     })
 
     const pendingCount = computed(() => (orders.value || []).filter(item => item.status === 'pending').length)
-    const shippedCount = computed(() => (orders.value || []).filter(item => item.status === 'paid').length)
-    const receivedCount = computed(() => 0)
-    const reviewedCount = computed(() => 0)
+    const shippedCount = computed(() => (orders.value || []).filter(item => item.status === 'paid' && item.shipment_status !== 'shipped').length)
+    const receivedCount = computed(() => (orders.value || []).filter(item => item.shipment_status === 'shipped').length)
+    const reviewedCount = computed(() => (orders.value || []).filter(item => item.status === 'completed').length)
 
     // ---- 生命周期 ----
     useDidShow(() => {

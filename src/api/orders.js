@@ -104,3 +104,12 @@ export async function cancelOrder (orderId) {
     method: 'POST'
   })
 }
+
+export async function getOrderTracking (orderId) {
+  const response = await request.get(`/api/v1/orders/${orderId}/tracking/`)
+
+  return ensureSuccessResponse(response, '获取物流信息失败', {
+    url: `/api/v1/orders/${orderId}/tracking/`,
+    method: 'GET'
+  })
+}
