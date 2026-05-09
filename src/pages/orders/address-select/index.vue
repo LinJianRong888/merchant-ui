@@ -460,25 +460,35 @@ export default {
       try {
         const order = await createSaleOrder(buildOrderRequestPayload())
 
-        const paymentPayload = await createOrderPayment(order.id)
-        await invokeWechatPayment(paymentPayload)
+        try {
+          const paymentPayload = await createOrderPayment(order.id)
+          await invokeWechatPayment(paymentPayload)
+          const paidOrder = await confirmOrderPaid(order)
 
-        const paidOrder = await confirmOrderPaid(order)
-
-        if (paidOrder?.status === 'paid') {
-          if (fromCart.value && selectedItemIds.value.length > 0) {
-            await cartStore.clearSelected(selectedItemIds.value)
+          if (paidOrder?.status === 'paid') {
+            if (fromCart.value && selectedItemIds.value.length > 0) {
+              await Promise.all(selectedItemIds.value.map((id) => cartStore.removeItem(id).catch(() => {})))
+              selectedItemIds.value = []
+            }
+            Taro.showToast({ title: '支付成功', icon: 'success' })
+            await sleep(1500)
+            await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=paid` })
+            return
+          } else {
+            Taro.showToast({ title: '支付结果待确认，可在订单列表查看', icon: 'none' })
           }
-          Taro.showToast({ title: '支付成功', icon: 'success' })
-        } else {
-          Taro.showToast({ title: '支付结果待确认，可在订单列表查看', icon: 'none' })
+        } catch (paymentError) {
+          console.warn('[order-confirm] payment not completed, order exists', paymentError?.message || paymentError)
         }
 
         await sleep(1500)
-        await Taro.reLaunch({ url: ORDERS_LIST_PAGE_PATH })
+        await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
       } catch (error) {
-        console.error('[order-confirm] order process failed', error)
-        Taro.showToast({ title: error?.message || '订单处理失败', icon: 'none' })
+        console.error('[order-confirm] order creation failed', error)
+        Taro.showToast({ title: error?.message || '订单创建失败', icon: 'none' })
+
+        await sleep(1500)
+        await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
       } finally {
         isSubmitting.value = false
       }

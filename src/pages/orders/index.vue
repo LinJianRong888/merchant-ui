@@ -52,8 +52,8 @@
               <text class="product-name">{{ item.product_name || '商品' }}</text>
               <text class="product-desc">{{ item.description || '' }}</text>
               <view class="product-bottom">
-                <text class="product-price">¥{{ Number(item.unit_price || 0).toFixed(2) }}</text>
                 <text class="product-quantity">x{{ item.quantity || 1 }}</text>
+                <text class="product-price">¥{{ Number(item._displayAmount || 0).toFixed(2) }}</text>
               </view>
             </view>
           </view>
@@ -84,6 +84,7 @@ import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, listOrders, cancelOrder } from '@/api/orders'
+import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
@@ -155,22 +156,48 @@ function getStatusMeta (status) {
     return { label: '已取消', className: 'is-cancelled', canPay: false }
   }
 
+  if (status === 'shipped') {
+    return { label: '已发货', className: 'is-paid', canPay: false }
+  }
+
+  if (status === 'completed') {
+    return { label: '已完成', className: 'is-paid', canPay: false }
+  }
+
   return { label: status || '状态待同步', className: 'is-neutral', canPay: false }
 }
 
-function normalizeOrders (items) {
+function normalizeOrders (items, productPriceMap) {
   if (!Array.isArray(items)) {
     return []
   }
+
+  const priceMap = productPriceMap || {}
 
   return [...items]
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
       const statusMeta = getStatusMeta(item?.status)
+      const orderItems = Array.isArray(item?.items) ? item.items : []
+      const totalAmount = Number(item?.total_amount || 0)
+      const totalQuantity = orderItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
+
+      const enrichedItems = orderItems.map((it) => {
+        const productId = it.product_id
+        const quantity = Number(it.quantity || 0)
+        const lineAmount = Number(it.line_amount || 0)
+        const unitPrice = Number(it.unit_price || (productId != null ? (priceMap[String(productId)] || priceMap[Number(productId)] || 0) : 0))
+        const fallbackAmount = totalQuantity > 0 ? Math.round((quantity / totalQuantity) * totalAmount * 100) / 100 : 0
+
+        return {
+          ...it,
+          _displayAmount: lineAmount || unitPrice * quantity || fallbackAmount
+        }
+      })
 
       return {
         ...item,
-        items: Array.isArray(item?.items) ? item.items : [],
+        items: enrichedItems,
         orderNoText: item?.order_no || `订单 #${item?.id || '--'}`,
         createdAtText: formatDateTime(item?.created_at),
         totalAmountText: formatPrice(item?.total_amount),
@@ -207,6 +234,70 @@ async function invokeWechatPayment (paymentPayload) {
   })
 }
 
+function buildProductPriceMap (products) {
+  const map = {}
+
+  if (!Array.isArray(products)) {
+    console.warn('[orders] buildProductPriceMap: products is not array', typeof products)
+    return map
+  }
+
+  console.warn('[orders] buildProductPriceMap: products count =', products.length)
+
+  products.forEach((p) => {
+    if (p?.id != null) {
+      const price = Number(p.price || 0)
+      map[p.id] = price
+      map[String(p.id)] = price
+    }
+  })
+
+  console.warn('[orders] buildProductPriceMap result keys:', Object.keys(map))
+
+  return map
+}
+
+async function fetchOrdersWithPrices () {
+  let list
+  let products = []
+
+  try {
+    const results = await Promise.allSettled([
+      listOrders(),
+      listSaleProducts()
+    ])
+
+    if (results[0].status === 'fulfilled') {
+      list = results[0].value
+    } else {
+      console.error('[orders] listOrders failed:', results[0].reason?.message)
+      throw results[0].reason
+    }
+
+    if (results[1].status === 'fulfilled') {
+      products = results[1].value
+    } else {
+      console.warn('[orders] listSaleProducts failed, using total_amount fallback:', results[1].reason?.message)
+    }
+  } catch (err) {
+    console.error('[orders] fetchOrdersWithPrices failed:', err?.message || err)
+    throw err
+  }
+
+  console.warn('[orders] fetchOrdersWithPrices: orders count =', list?.length, 'products count =', products?.length)
+
+  if (list?.length > 0 && list[0]?.items?.length > 0) {
+    console.warn('[orders] fetchOrdersWithPrices: sample item product_id =', list[0].items[0]?.product_id, 'type =', typeof list[0].items[0]?.product_id)
+  }
+  if (products?.length > 0) {
+    console.warn('[orders] fetchOrdersWithPrices: sample product id =', products[0]?.id, 'price =', products[0]?.price, 'type =', typeof products[0]?.id)
+  }
+
+  const priceMap = buildProductPriceMap(products)
+
+  return normalizeOrders(list, priceMap)
+}
+
 export default {
   setup () {
     const authStore = useAuthStore()
@@ -222,7 +313,7 @@ export default {
       { label: '待付款', value: 'pending' },
       { label: '待发货', value: 'paid' },
       { label: '待收货', value: 'shipped' },
-      { label: '待评价', value: 'completed' }
+      { label: '已完成', value: 'completed' }
     ]
 
     const {
@@ -233,8 +324,8 @@ export default {
       error,
       refetch
     } = useAppQuery({
-      queryKey: ['orders'],
-      queryFn: async () => normalizeOrders(await listOrders()),
+      queryKey: ['orders', 'v3'],
+      queryFn: fetchOrdersWithPrices,
       enabled: computed(() => authStore.isAuthenticated)
     })
 
@@ -251,7 +342,7 @@ export default {
     async function loadOrdersDirect () {
       console.info('[orders-page] fallback load start')
       fallbackError.value = null
-      fallbackOrders.value = normalizeOrders(await listOrders())
+      fallbackOrders.value = await fetchOrdersWithPrices()
       console.info('[orders-page] fallback load success', {
         count: fallbackOrders.value.length
       })

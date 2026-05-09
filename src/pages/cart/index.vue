@@ -44,6 +44,10 @@
     </view>
 
     <view v-if="hasItems" class="bottom-bar">
+      <view class="checkbox" @tap="toggleSelectAll">
+        <view :class="['checkbox-inner', { checked: isAllSelected }]"></view>
+        <text class="select-all-text">全选</text>
+      </view>
       <view class="total-info">
         <text class="total-label">合计：</text>
         <text class="total-price">¥{{ formatPrice(selectedTotalAmount) }}</text>
@@ -97,6 +101,10 @@ export default {
 
     const hasSelectedItems = computed(() => selectedItems.value.length > 0)
 
+    const isAllSelected = computed(() => {
+      return cartItems.value.length > 0 && selectedItemIds.value.length === cartItems.value.length
+    })
+
     watch(cartItems, (newItems) => {
       const existingIds = newItems.map(item => item.id)
       selectedItemIds.value = selectedItemIds.value.filter(id => existingIds.includes(id))
@@ -108,6 +116,14 @@ export default {
         selectedItemIds.value.splice(index, 1)
       } else {
         selectedItemIds.value.push(itemId)
+      }
+    }
+
+    function toggleSelectAll() {
+      if (isAllSelected.value) {
+        selectedItemIds.value = []
+      } else {
+        selectedItemIds.value = cartItems.value.map(item => item.id)
       }
     }
 
@@ -209,6 +225,7 @@ export default {
       selectedTotalCount,
       selectedTotalAmount,
       hasSelectedItems,
+      isAllSelected,
       goHome,
       formatPrice,
       handleDecreaseQuantity,
@@ -216,7 +233,8 @@ export default {
       handleDeleteItem,
       handleClearCart,
       handleCheckout,
-      toggleSelectItem
+      toggleSelectItem,
+      toggleSelectAll
     }
   }
 }

@@ -240,9 +240,11 @@
 }
 
 .bottom-bar .checkbox {
+  width: auto;
   display: flex;
   align-items: center;
   gap: 12rpx;
+  padding-top: 11px;
 }
 
 .select-all-text {
@@ -254,6 +256,7 @@
   display: flex;
   align-items: baseline;
   gap: 8rpx;
+  padding-left: 40rpx;
 }
 
 .total-label {

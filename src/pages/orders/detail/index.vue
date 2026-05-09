@@ -38,8 +38,7 @@
             </view>
             <view class="detail-item__meta-row">
               <text v-if="item.specification" class="detail-item__meta">规格 {{ item.specification }}</text>
-              <text class="detail-item__meta">单价 {{ formatPrice(item.unit_price) }}</text>
-              <text class="detail-item__meta">小计 {{ formatPrice(item.line_amount) }}</text>
+            
             </view>
           </view>
         </view>
@@ -121,6 +120,8 @@ function getStatusMeta (status) {
   if (status === 'paid') return { label: '已支付', className: 'is-paid' }
   if (status === 'pending') return { label: '待支付', className: 'is-pending' }
   if (status === 'cancelled' || status === 'closed') return { label: '已取消', className: 'is-cancelled' }
+  if (status === 'shipped') return { label: '已发货', className: 'is-paid' }
+  if (status === 'completed') return { label: '已完成', className: 'is-paid' }
   return { label: status || '状态待同步', className: 'is-neutral' }
 }
 

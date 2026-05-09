@@ -85,7 +85,7 @@
               <text class="order-badge-text">{{ reviewedCount }}</text>
             </view>
           </view>
-          <text class="order-label">待评价</text>
+          <text class="order-label">已完成</text>
         </view>
       </view>
     </view>

@@ -90,18 +90,17 @@ export const useCartStore = defineStore('cart', {
 
     async clearSelected(selectedIds) {
       try {
-        const currentItems = await getCartItems()
-        const newItems = currentItems.filter(item => !selectedIds.includes(item.id))
-        
-        const { setStorageSync } = Taro
-        setStorageSync('cart_items', newItems)
-        
-        this.items = newItems
-        this.totalCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
-        
+        const results = await Promise.all(
+          selectedIds.map((id) => removeFromCart(id))
+        )
+        const lastResult = results[results.length - 1] || { cartItems: [], totalItems: 0 }
+
+        this.items = lastResult.cartItems
+        this.totalCount = lastResult.totalItems
+
         return {
           success: true,
-          cartItems: newItems,
+          cartItems: lastResult.cartItems,
           totalItems: this.totalCount
         }
       } catch (error) {
