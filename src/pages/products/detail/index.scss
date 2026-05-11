@@ -1,6 +1,8 @@
+@import '@/styles/variables';
+
 .product-detail-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: $color-bg;
   padding-bottom: 120rpx;
 }
 
@@ -17,7 +19,7 @@
 .product-image {
   width: 100%;
   height: 100%;
-  background-color: #f0f0f0;
+  background-color: $color-border;
 }
 
 .product-image--empty {
@@ -30,11 +32,11 @@
 .product-image__text {
   font-size: 96rpx;
   font-weight: 700;
-  color: #8a6a2f;
+  color: $color-warning;
 }
 
 .product-info {
-  background-color: #fff;
+  background-color: $color-bg-white;
   padding: 32rpx;
 }
 
@@ -47,12 +49,12 @@
 .product-price {
   font-size: 48rpx;
   font-weight: bold;
-  color: #ff4d4f;
+  color: $color-danger;
 }
 
 .product-origin-price {
   font-size: 28rpx;
-  color: #999;
+  color: $color-text-muted;
   text-decoration: line-through;
 }
 
@@ -66,27 +68,27 @@
 .product-name {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
   flex: 1;
 }
 
 .product-index {
   font-size: 24rpx;
-  color: #999;
+  color: $color-text-muted;
 }
 
 .product-tag {
   display: inline-block;
   margin-top: 16rpx;
   padding: 8rpx 16rpx;
-  background-color: #fff7e6;
-  color: #fa8c16;
+  background-color: $color-bg-primary-tint;
+  color: $color-primary;
   font-size: 24rpx;
   border-radius: 8rpx;
 }
 
 .product-specs {
-  background-color: #fff;
+  background-color: $color-bg-white;
   margin-top: 16rpx;
   padding: 32rpx;
 }
@@ -94,14 +96,14 @@
 .specs-title {
   font-size: 28rpx;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
   margin-bottom: 24rpx;
 }
 
 .spec-item {
   display: flex;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid $color-border;
 }
 
 .spec-item:last-child {
@@ -111,7 +113,7 @@
 .spec-label {
   width: 160rpx;
   font-size: 28rpx;
-  color: #666;
+  color: $color-text-secondary;
 }
 
 .spec-value {
@@ -130,7 +132,7 @@
   background-color: #fff;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  box-shadow: $shadow-footer;
 }
 
 .bottom-left {
@@ -168,8 +170,8 @@
   min-width: 32rpx;
   height: 32rpx;
   line-height: 32rpx;
-  background: #ff4d4f;
-  color: #fff;
+  background: $color-danger;
+  color: $color-text-on-primary;
   font-size: 20rpx;
   font-weight: bold;
   border-radius: 16rpx;
@@ -190,11 +192,11 @@
   min-width: 200rpx;
   height: 80rpx;
   line-height: 80rpx;
-  background: #fff;
+  background: $color-bg-white;
   color: #333;
   font-size: 28rpx;
   font-weight: bold;
-  border-radius: 40rpx;
+  border-radius: $radius-round;
   border: 2rpx solid #333;
   padding: 0 32rpx;
 }
@@ -207,8 +209,8 @@
   min-width: 200rpx;
   height: 80rpx;
   line-height: 80rpx;
-  background: linear-gradient(135deg, #ff7842 0%, #ff562a 100%);
-  color: #fff;
+  background: $color-primary-gradient;
+  color: $color-text-on-primary;
   font-size: 28rpx;
   font-weight: bold;
   border-radius: 40rpx;

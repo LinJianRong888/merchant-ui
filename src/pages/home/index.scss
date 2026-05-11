@@ -1,6 +1,8 @@
+@import '@/styles/variables';
+
 .home-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: $color-bg;
   padding-bottom: 100rpx;
 }
 
@@ -15,7 +17,7 @@
 .search-input-wrapper {
   display: flex;
   align-items: center;
-  background: #f8f8f8;
+  background: $color-bg-light;
   border-radius: 48rpx;
   padding: 20rpx 32rpx;
 }
@@ -46,7 +48,7 @@
   left: 22rpx;
   width: 3rpx;
   height: 16rpx;
-  background: #999;
+  background: $color-text-muted;
   transform: rotate(-45deg);
   transform-origin: top;
 }
@@ -54,22 +56,22 @@
 .search-input {
   flex: 1;
   font-size: 28rpx;
-  color: #333;
+  color: $color-text-primary;
 }
 
 .search-placeholder {
-  color: #999;
+  color: $color-text-muted;
 }
 
 .search-results {
-  background: #fff;
+  background: $color-bg-white;
   margin-top: 16rpx;
   padding: 32rpx 24rpx;
 }
 
 .result-count {
   font-size: 26rpx;
-  color: #999;
+  color: $color-text-muted;
 }
 
 .empty-results {
@@ -111,7 +113,7 @@
 
 .banner-image__text {
   font-size: 30rpx;
-  color: #8a6a2f;
+  color: $color-warning;
 }
 
 .hot-section {
@@ -130,7 +132,7 @@
 .section-title {
   font-size: 36rpx;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
 }
 
 .more-btn {
@@ -157,7 +159,7 @@
 
 .product-card {
   background: #fff;
-  border-radius: 16rpx;
+  border-radius: $radius-lg;
   overflow: hidden;
 }
 
@@ -194,7 +196,7 @@
   display: block;
   font-size: 32rpx;
   font-weight: bold;
-  color: #ff4d4f;
+  color: $color-danger;
   margin-top: 8rpx;
 }
 

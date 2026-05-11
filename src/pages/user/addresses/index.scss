@@ -1,11 +1,13 @@
+@import '@/styles/variables';
+
 .addresses-page {
 	position: relative;
 	min-height: 100vh;
 	overflow: hidden;
 	padding: 32px 24px 40px;
 	box-sizing: border-box;
-	background: #fff;
-	color: #201c17;
+	background: $color-bg-white;
+	color: $color-text-primary;
 }
 
 .addresses-page__glow {
@@ -54,7 +56,7 @@
 .addresses-header__title {
 	font-size: 36px;
 	font-weight: 700;
-	color: #231d18;
+	color: $color-text-primary;
 }
 
 .addresses-header__add {
@@ -111,7 +113,7 @@
 
 .address-card__phone {
 	font-size: 24px;
-	color: #6d6257;
+	color: $color-text-secondary;
 }
 
 .address-card__badge {
@@ -125,13 +127,13 @@
 	background: rgb(225 242 227 / 96%);
 	font-size: 22px;
 	font-weight: 700;
-	color: #25633b;
+	color: $color-success;
 }
 
 .address-card__address {
 	padding: 16px 18px;
 	border-radius: 20px;
-	background: #f9fafb;
+	background: $color-bg-light;
 	border: 1px solid #fff;
 }
 
@@ -160,7 +162,7 @@
 	background: #fff;
 	border: 1px solid #fff;
 	box-shadow: 0 8px 16px rgb(92 67 35 / 8%);
-	color: #8e6423;
+	color: $color-primary;
 }
 
 .address-card__action--edit::after {

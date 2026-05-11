@@ -1,8 +1,10 @@
+@import '@/styles/variables';
+
 .address-edit-page {
 	position: relative;
 	min-height: 100vh;
-	background: #fff;
-	color: #201c17;
+	background: $color-bg-white;
+	color: $color-text-primary;
 	padding-bottom: 120px;
 }
 
@@ -53,7 +55,7 @@
 .form-section__title {
 	font-size: 28px;
 	font-weight: 700;
-	color: #231d18;
+	color: $color-text-primary;
 	margin-bottom: 6px;
 }
 
@@ -95,7 +97,7 @@
 
 .form-input:focus,
 .form-textarea:focus {
-	border-color: #af6d14;
+	border-color: $color-primary;
 	background: #fff;
 	outline: none;
 }

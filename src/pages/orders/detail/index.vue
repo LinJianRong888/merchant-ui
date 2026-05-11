@@ -147,7 +147,44 @@
       <view v-else-if="order.status !== 'cancelled' && order.status !== 'closed'" class="detail-footer">
         <button class="detail-action-btn detail-action-btn--after-sale" @tap="handleApplyAfterSale">申请售后</button>
         <button class="detail-action-btn detail-action-btn--service" @tap="handleContactService">咨询客服</button>
-        <button class="detail-action-btn detail-action-btn--logistics" @tap="handleViewLogistics">查看物流</button>
+        <button v-if="showLogistics" class="detail-action-btn detail-action-btn--logistics" @tap="handleViewLogistics">查看物流</button>
+      </view>
+    </view>
+
+    <view v-if="showTrackingPanel" class="tracking-overlay" @tap="closeTrackingPanel">
+      <view class="tracking-panel" @tap.stop>
+        <view class="tracking-panel__header">
+          <text class="tracking-panel__title">物流详情</text>
+          <text class="tracking-panel__close" @tap="closeTrackingPanel">✕</text>
+        </view>
+
+        <view v-if="isTrackingLoading" class="tracking-panel__loading">
+          <text>查询中...</text>
+        </view>
+
+        <template v-else-if="trackingData">
+          <view class="tracking-courier">
+            <text class="tracking-courier__company">{{ trackingData.courier_company?.name || '--' }}</text>
+            <text class="tracking-courier__no">运单号：{{ trackingData.tracking_no || '--' }}</text>
+            <text v-if="trackingData.state_label" class="tracking-courier__state">{{ trackingData.state_label }}</text>
+          </view>
+
+          <view v-if="trackingTraces.length > 0" class="tracking-timeline">
+            <view v-for="(trace, idx) in trackingTraces" :key="idx" :class="['tracking-trace', { 'tracking-trace--latest': idx === trackingTraces.length - 1 }]">
+              <view class="tracking-trace__dot"></view>
+              <view class="tracking-trace__content">
+                <text class="tracking-trace__status">{{ trace.status }}</text>
+                <view class="tracking-trace__meta">
+                  <text class="tracking-trace__time">{{ trace.time }}</text>
+                  <text v-if="trace.area_name" class="tracking-trace__area">{{ trace.area_name }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view v-else class="tracking-panel__empty">暂无物流轨迹</view>
+        </template>
+
+        <view v-else class="tracking-panel__empty">获取物流信息失败</view>
       </view>
     </view>
   </view>
@@ -278,6 +315,10 @@ export default {
     const isPaying = ref(false)
     const isCancelling = ref(false)
 
+    const showTrackingPanel = ref(false)
+    const trackingData = ref(null)
+    const isTrackingLoading = ref(false)
+
     const {
       data: order,
       isLoading,
@@ -315,6 +356,16 @@ export default {
     const fullAddressText = computed(() => orderAddress.value ? formatFullAddress(orderAddress.value) : '')
 
     const timelineStep = computed(() => getTimelineStep(order.value))
+
+    const showLogistics = computed(() => {
+      const step = timelineStep.value
+      return step === 'shipped' || step === 'completed'
+    })
+
+    const trackingTraces = computed(() => {
+      if (!trackingData.value?.traces) return []
+      return trackingData.value.traces
+    })
 
     function isTimelineActive (step) {
       const steps = ['created', 'paid', 'shipped', 'completed']
@@ -393,28 +444,23 @@ export default {
 
     function handleViewLogistics () {
       if (!order.value?.id) return
-      Taro.showLoading({ title: '查询中...' })
-      getOrderTracking(order.value.id).then((tracking) => {
-        Taro.hideLoading()
-        const courier = tracking?.courier_company?.name || '--'
-        const trackingNo = tracking?.tracking_no || '--'
-        const traces = tracking?.traces || []
-        const latestTrace = traces.length > 0 ? traces[traces.length - 1] : null
-        const content = [
-          `快递：${courier}`,
-          `单号：${trackingNo}`,
-          latestTrace ? `最新：${latestTrace.time} ${latestTrace.status}` : ''
-        ].filter(Boolean).join('\n')
-
-        Taro.showModal({
-          title: '物流信息',
-          content,
-          showCancel: false
-        })
+      showTrackingPanel.value = true
+      trackingData.value = null
+      isTrackingLoading.value = true
+      getOrderTracking(order.value.id).then((data) => {
+        // eslint-disable-next-line no-console
+        console.log('[order-detail] tracking response', JSON.stringify(data, null, 2))
+        trackingData.value = data
+        isTrackingLoading.value = false
       }).catch((err) => {
-        Taro.hideLoading()
+        isTrackingLoading.value = false
         Taro.showToast({ title: err?.message || '查询失败', icon: 'none' })
       })
+    }
+
+    function closeTrackingPanel () {
+      showTrackingPanel.value = false
+      trackingData.value = null
     }
 
     useLoad((params) => {
@@ -443,6 +489,7 @@ export default {
       handleApplyAfterSale,
       handleContactService,
       handleViewLogistics,
+      closeTrackingPanel,
       isCancelling,
       isError,
       isFetching,
@@ -454,6 +501,11 @@ export default {
       orderItems,
       orderTypeLabel,
       refetch,
+      showLogistics,
+      showTrackingPanel,
+      trackingData,
+      isTrackingLoading,
+      trackingTraces,
       statusMeta
     }
   }

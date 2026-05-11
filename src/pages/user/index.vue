@@ -26,16 +26,21 @@
         <view class="user-detail">
           <text class="welcome-text">欢迎回来</text>
 
-          <!-- 手机号：从后端 profile.phone 读取 -->
           <template v-if="isLoggedIn">
             <text v-if="profilePhone" class="user-phone">
               {{ maskPhone(profilePhone) }}
             </text>
             <button
+              v-if="profilePhone && !pendingPhoneAuth"
+              class="phone-action-btn"
+              @tap="handlePhoneChange"
+            >修改手机号</button>
+            <button
+              v-else
               class="phone-action-btn"
               open-type="getPhoneNumber"
               @getphonenumber="onGetPhoneNumber"
-            >{{ profilePhone ? '更新手机号' : '获取手机号' }}</button>
+            >{{ profilePhone ? '授权新手机号' : '获取手机号' }}</button>
           </template>
           <text v-else class="user-phone-hint" @tap="goToLogin">点击登录</text>
         </view>
@@ -148,6 +153,8 @@ export default {
     // ---- 头像（本地存储，无需后端） ----
     const avatarUrl = ref(Taro.getStorageSync(STORAGE_AVATAR_KEY) || '')
 
+    const pendingPhoneAuth = ref(false)
+
     function onChooseAvatar(e) {
       const url = e.detail && e.detail.avatarUrl
       if (!url) return
@@ -167,8 +174,9 @@ export default {
     })
 
     const profilePhone = computed(() => {
-      if (!userInfo.value) return ''
-      return userInfo.value.profile?.phone || ''
+      const apiPhone = userInfo.value?.profile?.phone || ''
+      const storePhone = authStore.purePhoneNumber || authStore.phoneNumber || ''
+      return apiPhone || storePhone
     })
 
     function maskPhone(phone) {
@@ -179,11 +187,13 @@ export default {
     async function onGetPhoneNumber(e) {
       const detail = e.detail || {}
       if (detail.errMsg && !detail.errMsg.includes('ok')) {
+        pendingPhoneAuth.value = false
         Taro.showToast({ title: '取消授权', icon: 'none' })
         return
       }
       const code = detail.code
       if (!code) {
+        pendingPhoneAuth.value = false
         Taro.showToast({ title: '获取手机号失败', icon: 'none' })
         return
       }
@@ -194,19 +204,18 @@ export default {
         })
         const data = response.data || response
 
-        // 更新本地 store
         authStore.setPhoneNumber({
           phone_number: data.phone_number || '',
           pure_phone_number: data.pure_phone_number || '',
           country_code: data.country_code || ''
         })
 
-        // 重新读取后端用户信息
         await refetchUser()
 
-        Taro.showToast({ title: '手机号已绑定', icon: 'success' })
+        pendingPhoneAuth.value = false
+        Taro.showToast({ title: profilePhone.value ? '手机号已修改' : '手机号已绑定', icon: 'success' })
       } catch (err) {
-        // 后端验证非中国大陆手机号会返回错误
+        pendingPhoneAuth.value = false
         const errMsg = (err && (err.message || err.errMsg || '')) || ''
         if (errMsg.includes('phone') || errMsg.includes('mobile') || errMsg.includes('手机号')) {
           Taro.showToast({ title: '暂不支持此手机号', icon: 'none' })
@@ -214,6 +223,18 @@ export default {
           Taro.showToast({ title: '获取手机号失败', icon: 'none' })
         }
       }
+    }
+
+    function handlePhoneChange () {
+      Taro.showModal({
+        title: '修改手机号',
+        content: '确认将手机号修改为新授权的号码吗？',
+        success: (res) => {
+          if (res.confirm) {
+            pendingPhoneAuth.value = true
+          }
+        }
+      })
     }
 
     // ---- 订单 ----
@@ -280,6 +301,8 @@ export default {
       profilePhone,
       maskPhone,
       onGetPhoneNumber,
+      handlePhoneChange,
+      pendingPhoneAuth,
       pendingCount,
       shippedCount,
       receivedCount,

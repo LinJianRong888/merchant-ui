@@ -1,6 +1,8 @@
+@import '@/styles/variables';
+
 .cart-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: $color-bg;
   padding-bottom: 140rpx;
 }
 
@@ -12,13 +14,13 @@
   align-items: center;
   justify-content: flex-end;
   padding: 80rpx 32rpx 24rpx;
-  background: #fff;
+  background: $color-bg-white;
 }
 
 .nav-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
 }
 
 .nav-more {
@@ -31,7 +33,7 @@
 
 .nav-more-text {
   font-size: 28rpx;
-  color: #666;
+  color: $color-text-secondary;
 }
 
 .loading-view {
@@ -43,7 +45,7 @@
 
 .loading-text {
   font-size: 28rpx;
-  color: #999;
+  color: $color-text-muted;
 }
 
 .empty-view {
@@ -60,7 +62,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: $color-bg;
   border-radius: 100rpx;
   margin-bottom: 32rpx;
 }
@@ -71,7 +73,7 @@
 
 .empty-text {
   font-size: 28rpx;
-  color: #999;
+  color: $color-text-muted;
   margin-bottom: 48rpx;
 }
 
@@ -79,11 +81,11 @@
   min-width: 200rpx;
   height: 80rpx;
   line-height: 80rpx;
-  background: linear-gradient(135deg, #ff7842 0%, #ff562a 100%);
-  color: #fff;
+  background: $color-primary-gradient;
+  color: $color-text-on-primary;
   font-size: 28rpx;
   font-weight: bold;
-  border-radius: 40rpx;
+  border-radius: $radius-round;
   border: none;
   padding: 0 48rpx;
 }
@@ -100,9 +102,9 @@
   display: flex;
   align-items: center;
   gap: 24rpx;
-  background: #fff;
+  background: $color-bg-white;
   padding: 24rpx;
-  border-radius: 16rpx;
+  border-radius: $radius-lg;
   margin-bottom: 16rpx;
   position: relative;
 }
@@ -119,7 +121,7 @@
 .checkbox-inner {
   width: 40rpx;
   height: 40rpx;
-  border: 2rpx solid #ddd;
+  border: 2rpx solid $color-border-strong;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -127,7 +129,7 @@
 }
 
 .checkbox-inner.checked {
-  border-color: #ff7842;
+  border-color: $color-primary-start;
   background: linear-gradient(135deg, #ff7842 0%, #ff562a 100%);
 }
 
@@ -144,8 +146,8 @@
 .item-image {
   width: 160rpx;
   height: 160rpx;
-  border-radius: 12rpx;
-  background: #f5f5f5;
+  border-radius: $radius-md;
+  background: $color-bg;
   flex-shrink: 0;
 }
 
@@ -160,7 +162,7 @@
 .item-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #333;
+  color: $color-text-primary;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -181,7 +183,7 @@
 .item-price {
   font-size: 32rpx;
   font-weight: bold;
-  color: #ff4d4f;
+  color: $color-danger;
 }
 
 .quantity-box {
@@ -196,10 +198,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: $color-bg;
   border-radius: 8rpx;
   font-size: 32rpx;
-  color: #333;
+  color: $color-text-primary;
   font-weight: bold;
 }
 
@@ -236,7 +238,7 @@
   padding: 24rpx 32rpx;
   padding-bottom: calc(-20rpx + env(safe-area-inset-bottom));
   background: #fff;
-  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  box-shadow: $shadow-footer;
 }
 
 .bottom-bar .checkbox {
@@ -267,7 +269,7 @@
 .total-price {
   font-size: 40rpx;
   font-weight: bold;
-  color: #ff4d4f;
+  color: $color-danger;
 }
 
 .checkout-btn {

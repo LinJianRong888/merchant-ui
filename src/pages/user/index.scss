@@ -1,11 +1,13 @@
+@import '@/styles/variables';
+
 .user-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: $color-bg;
   padding-bottom: 100rpx;
 }
 
 .user-header {
-  background: #fff;
+  background: $color-bg-white;
   padding: 80rpx 32rpx 48rpx;
 }
 
@@ -23,7 +25,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffcc00;
+  background: $color-warning;
 }
 
 /* 已登录时的头像选择按钮 */
@@ -83,19 +85,19 @@
 .welcome-text {
   font-size: 36rpx;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
   margin-bottom: 8rpx;
 }
 
 .user-phone {
   font-size: 26rpx;
-  color: #666;
+  color: $color-text-secondary;
   margin-bottom: 8rpx;
 }
 
 .user-phone-hint {
   font-size: 26rpx;
-  color: #999;
+  color: $color-text-muted;
 }
 
 /* 获取/更新手机号按钮 — 深色背景胶囊样式 */
@@ -105,8 +107,8 @@
   height: 52rpx !important;
   line-height: 52rpx !important;
   font-size: 24rpx !important;
-  color: #fff !important;
-  background: #333 !important;
+  color: $color-text-on-primary !important;
+  background: $color-text-primary !important;
   border-radius: 26rpx !important;
   border: none !important;
   display: inline-flex !important;
@@ -128,7 +130,7 @@
 .order-section {
   background: #fff;
   margin: 24rpx;
-  border-radius: 16rpx;
+  border-radius: $radius-lg;
   padding: 32rpx 24rpx;
 }
 
@@ -142,7 +144,7 @@
 .order-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333;
+  color: $color-text-primary;
 }
 
 .order-more {
@@ -152,7 +154,7 @@
 
 .order-more-text {
   font-size: 26rpx;
-  color: #999;
+  color: $color-text-muted;
 }
 
 .order-more-arrow {
@@ -191,7 +193,7 @@
   min-width: 32rpx;
   height: 32rpx;
   border-radius: 16rpx;
-  background: #ff4d4f;
+  background: $color-danger;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -206,7 +208,7 @@
 
 .order-label {
   font-size: 24rpx;
-  color: #666;
+  color: $color-text-secondary;
 }
 
 .menu-section {

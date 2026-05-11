@@ -1,9 +1,56 @@
 <template>
   <view class="login-page">
-    <view class="login-shell">
-      <button class="login-button" :loading="isSubmitting" @tap="handleWechatLogin">
-        {{ primaryButtonText }}
-      </button>
+    <view class="tea-bg">
+      <view class="tea-wave tea-wave--1"></view>
+      <view class="tea-wave tea-wave--2"></view>
+      <view class="tea-wave tea-wave--3"></view>
+    </view>
+
+    <view class="tea-cup">
+      <view class="tea-cup__top">
+        <view class="tea-cup__cream">
+          <view class="tea-cup__cream-drip tea-cup__cream-drip--1"></view>
+          <view class="tea-cup__cream-drip tea-cup__cream-drip--2"></view>
+          <view class="tea-cup__cream-drip tea-cup__cream-drip--3"></view>
+        </view>
+        <view class="tea-cup__body">
+          <view class="tea-cup__tea"></view>
+          <view class="tea-boba tea-boba--1"></view>
+          <view class="tea-boba tea-boba--2"></view>
+          <view class="tea-boba tea-boba--3"></view>
+          <view class="tea-boba tea-boba--4"></view>
+          <view class="tea-boba tea-boba--5"></view>
+          <view class="tea-boba tea-boba--6"></view>
+          <view class="tea-cup__straw"></view>
+        </view>
+      </view>
+      <view class="tea-cup__shine"></view>
+    </view>
+
+    <view class="login-brand">
+      <text class="login-brand__name">柑之饴</text>
+      <text class="login-brand__slogan">一杯好茶 · 一份心意</text>
+    </view>
+
+    <button
+      class="login-button"
+      :class="{ 'login-button--disabled': !agreedToTerms }"
+      :loading="isSubmitting"
+      :disabled="!agreedToTerms"
+      @tap="handleWechatLogin"
+    >
+      <view class="login-button__inner">
+        <text class="login-button__icon">🧋</text>
+        <text>{{ primaryButtonText }}</text>
+      </view>
+    </button>
+
+    <view class="login-agreement" @tap="toggleAgreement">
+      <view :class="['agreement-checkbox', { 'agreement-checkbox--checked': agreedToTerms }]">
+        <text v-if="agreedToTerms" class="agreement-checkbox__tick">✓</text>
+      </view>
+      <text class="agreement-text">已阅读并同意</text>
+      <text class="agreement-link">《用户服务协议》</text>
     </view>
   </view>
 </template>
@@ -17,13 +64,15 @@ import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
 
-const PRODUCTS_PAGE_PATH = '/pages/products/index'
+const HOME_PAGE_PATH = '/pages/home/index'
 
 export default {
   setup () {
     const authStore = useAuthStore()
     const isSubmitting = ref(false)
     const isRedirecting = ref(false)
+
+    const agreedToTerms = ref(false)
 
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const primaryButtonText = computed(() => {
@@ -34,7 +83,7 @@ export default {
       return isAuthenticated.value ? '重新登录' : '微信一键登录'
     })
 
-    async function redirectToProducts () {
+    async function redirectToHome () {
       if (isRedirecting.value) {
         return
       }
@@ -43,7 +92,7 @@ export default {
 
       try {
         await Taro.switchTab({
-          url: PRODUCTS_PAGE_PATH
+          url: HOME_PAGE_PATH
         })
       } finally {
         isRedirecting.value = false
@@ -52,6 +101,11 @@ export default {
 
     async function handleWechatLogin () {
       if (isSubmitting.value) {
+        return
+      }
+
+      if (!agreedToTerms.value) {
+        Taro.showToast({ title: '请先同意用户服务协议', icon: 'none' })
         return
       }
 
@@ -91,7 +145,7 @@ export default {
             title: '登录成功',
             icon: 'success'
           })
-          await redirectToProducts()
+          await redirectToHome()
           return
         }
 
@@ -109,11 +163,15 @@ export default {
       }
     }
 
+    function toggleAgreement () {
+      agreedToTerms.value = !agreedToTerms.value
+    }
+
     useDidShow(() => {
       authStore.hydrate()
 
       if (authStore.isAuthenticated) {
-        void redirectToProducts()
+        void redirectToHome()
       }
     })
 
@@ -121,7 +179,9 @@ export default {
       handleWechatLogin,
       isAuthenticated,
       isSubmitting,
-      primaryButtonText
+      primaryButtonText,
+      agreedToTerms,
+      toggleAgreement
     }
   }
 }

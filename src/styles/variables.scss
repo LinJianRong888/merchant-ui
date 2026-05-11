@@ -1,0 +1,79 @@
+// ============================================================
+// Merchant UI — 全局设计变量（奶茶风格）
+// 切换 UI 风格：修改此文件即可，或创建主题文件覆盖以下变量
+// ============================================================
+
+// ------- 主色调（奶茶棕） -------
+$color-primary:               #B8865E !default;
+$color-primary-start:         #D4A574 !default;
+$color-primary-end:           #8D6E63 !default;
+$color-primary-gradient:      linear-gradient(135deg, $color-primary-start 0%, $color-primary-end 100%) !default;
+
+// ------- 背景色 -------
+$color-bg:                    #FDF3E8 !default;
+$color-bg-white:              #FFFCF9 !default;
+$color-bg-light:              #FFF7EE !default;
+$color-bg-primary-tint:       #F5E6D3 !default;
+
+// ------- 文字色 -------
+$color-text-primary:          #4E342E !default;
+$color-text-secondary:        #8D6E63 !default;
+$color-text-muted:            #BCAAA4 !default;
+$color-text-on-primary:       #fff !default;
+
+// ------- 边框色 -------
+$color-border:                #F0E6D8 !default;
+$color-border-light:          #E0D0C0 !default;
+$color-border-strong:         #D0BFA8 !default;
+$color-border-primary:        #B8865E !default;
+
+// ------- 阴影 -------
+$shadow-footer:               0 -2rpx 10rpx rgba(100, 70, 40, .06) !default;
+$shadow-overlay:              rgba(60, 30, 10, .5) !default;
+$shadow-primary-glow:         0 0 0 4rpx rgba($color-primary-start, .25) !default;
+
+// ------- 状态色 -------
+$color-success:               #6D8B4E !default;
+$color-danger:                #C48B6A !default;
+$color-warning:               #D4A574 !default;
+
+// ------- 排版 字号 -------
+$font-size-xs:                22rpx !default;
+$font-size-sm:                24rpx !default;
+$font-size-base:              26rpx !default;
+$font-size-md:                28rpx !default;
+$font-size-lg:                30rpx !default;
+$font-size-xl:                32rpx !default;
+$font-size-2xl:               36rpx !default;
+$font-size-3xl:               56rpx !default;
+
+// ------- 排版 字重 -------
+$font-weight-normal:          400 !default;
+$font-weight-medium:          500 !default;
+$font-weight-semibold:        600 !default;
+$font-weight-bold:            700 !default;
+
+// ------- 圆角 -------
+$radius-sm:                   8rpx !default;
+$radius-md:                   12rpx !default;
+$radius-lg:                   16rpx !default;
+$radius-xl:                   24rpx !default;
+$radius-round:                40rpx !default;
+$radius-full:                 999px !default;
+
+// ------- 间距 -------
+$spacing-xs:                  4rpx !default;
+$spacing-sm:                  8rpx !default;
+$spacing-base:                14rpx !default;
+$spacing-md:                  16rpx !default;
+$spacing-lg:                  20rpx !default;
+$spacing-xl:                  24rpx !default;
+$spacing-2xl:                 32rpx !default;
+$spacing-3xl:                 48rpx !default;
+
+// ------- 按钮高度 -------
+$btn-height:                  80rpx !default;
+
+// ------- 骨架屏 -------
+$skeleton-base:               #F0E6D8 !default;
+$skeleton-shine:              #FAF2E8 !default;

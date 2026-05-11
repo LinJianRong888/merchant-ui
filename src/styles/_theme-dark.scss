@@ -1,0 +1,37 @@
+// ============================================================
+// 暗色主题 — 覆盖 variables.scss 中的 !default 变量
+// 切换到全局：在 _theme.scss 中 import 本文件
+// ============================================================
+
+// ------- 主色调（暗色主题用冷色调） -------
+$color-primary:               #4da6ff;
+$color-primary-start:         #4da6ff;
+$color-primary-end:           #1a73e8;
+$color-primary-gradient:      linear-gradient(135deg, $color-primary-start 0%, $color-primary-end 100%);
+
+// ------- 背景色 -------
+$color-bg:                    #1a1a2e;
+$color-bg-white:              #222240;
+$color-bg-light:              #2a2a4a;
+$color-bg-primary-tint:       #1a2a3e;
+
+// ------- 文字色 -------
+$color-text-primary:          #e0e0e0;
+$color-text-secondary:        #a0a0b0;
+$color-text-muted:            #707088;
+$color-text-on-primary:       #fff;
+
+// ------- 边框色 -------
+$color-border:                #2a2a4a;
+$color-border-light:          #3a3a5a;
+$color-border-strong:         #4a4a6a;
+$color-border-primary:        #4da6ff;
+
+// ------- 阴影 -------
+$shadow-footer:               0 -2rpx 10rpx rgba(0, 0, 0, .3);
+$shadow-overlay:              rgba(0, 0, 0, .7);
+$shadow-primary-glow:         0 0 0 4rpx rgba($color-primary-start, .25);
+
+// ------- 骨架屏 -------
+$skeleton-base:               #2a2a4a;
+$skeleton-shine:              #333358;
