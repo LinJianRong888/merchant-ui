@@ -1,0 +1,80 @@
+@import '@/styles/variables';
+
+.agreement-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FFF7EE 0%, #FDF0E0 30%, #FAE5CC 60%, #F5D8B8 100%);
+  padding: 32rpx 24rpx 80rpx;
+  box-sizing: border-box;
+}
+
+.agreement-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 0 36rpx;
+}
+
+.agreement-header__title {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #4E342E;
+}
+
+.agreement-header__subtitle {
+  font-size: 26rpx;
+  color: #A0806A;
+  margin-top: 12rpx;
+}
+
+.agreement-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.agreement-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 28rpx 32rpx;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
+}
+
+.agreement-card__title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #4E342E;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.agreement-card__text {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #5D4037;
+  display: block;
+}
+
+.agreement-card__text + .agreement-card__text {
+  margin-top: 8rpx;
+}
+
+.agreement-card__text--highlight {
+  color: #B8865E;
+  font-weight: 600;
+}
+
+.agreement-card--contact {
+  background: linear-gradient(135deg, #FFF8F0 0%, #FFF0E0 100%);
+  border: 2rpx solid #E8D5C0;
+}
+
+.agreement-footer {
+  display: flex;
+  justify-content: center;
+  padding: 48rpx 0 24rpx;
+}
+
+.agreement-footer__text {
+  font-size: 24rpx;
+  color: #BCAAA4;
+}

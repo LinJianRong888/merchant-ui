@@ -3,7 +3,7 @@
 .address-edit-page {
 	position: relative;
 	min-height: 100vh;
-	background: $color-bg-white;
+	background: linear-gradient(180deg, #FFF7EE 0%, #FDF0E0 30%, #FAE5CC 60%, #F5D8B8 100%);
 	color: $color-text-primary;
 	padding-bottom: 120px;
 }
@@ -148,19 +148,19 @@
 
 .edit-footer__button {
 	flex: 1;
-	height: 80px;
-	line-height: 80px;
-	border-radius: 20px;
-	font-size: 28px;
+	height: 88rpx;
+	line-height: 88rpx;
+	border-radius: 999px;
+	font-size: 30rpx;
 	font-weight: 700;
 	border: none;
 }
 
 .edit-footer__button--cancel {
 	background: #fff;
-	color: #0a0a0a;
-	border: 1px solid #fff;
-	box-shadow: 0 8px 16px rgba(15, 15, 15, 0.08);
+	color: #8D6E63;
+	border: 2rpx solid #D4A574;
+	box-shadow: 0 8px 16px rgb(15, 15, 15, 0.08);
 }
 
 .edit-footer__button--cancel::after {
@@ -168,9 +168,11 @@
 }
 
 .edit-footer__button--save {
-	background: #fff;
-	color: #33260d;
-	
+	background: linear-gradient(135deg, #D4A574 0%, #B8865E 50%, #8D6E63 100%);
+	box-shadow:
+		0 12rpx 32rpx rgba(180, 130, 90, 0.35),
+		0 4rpx 8rpx rgba(140, 100, 60, 0.2);
+	color: #fff;
 }
 
 .edit-footer__button--save::after {
@@ -178,5 +180,6 @@
 }
 
 .edit-footer__button--save:disabled {
-	opacity: 0.6;
+	opacity: 0.45;
+	pointer-events: none;
 }

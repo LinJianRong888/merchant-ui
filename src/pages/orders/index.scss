@@ -2,7 +2,7 @@
 
 .orders-page {
   min-height: 100vh;
-  background-color: $color-bg;
+  background: linear-gradient(180deg, #FFF7EE 0%, #FDF0E0 30%, #FAE5CC 60%, #F5D8B8 100%);
 }
 
 .tabs-container {
@@ -38,6 +38,26 @@
   height: 4rpx;
   background-color: $color-warning;
   border-radius: 2rpx;
+}
+
+.tab-count {
+  display: inline-block;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  font-size: 20rpx;
+  color: $color-text-primary;
+  background: #E8E0D5;
+  border-radius: $radius-full;
+  text-align: center;
+  padding: 0 8rpx;
+  margin-left: 6rpx;
+  vertical-align: middle;
+}
+
+.tab-count--active {
+  color: #fff;
+  background: $color-primary;
 }
 
 .orders-list,

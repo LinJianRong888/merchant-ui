@@ -10,6 +10,7 @@ export default defineAppConfig({
     'pages/user/index',
     'pages/user/addresses/index',
     'pages/user/addresses/edit/index',
+    'pages/user/agreement/index',
     'pages/index/index'
   ],
   window: {

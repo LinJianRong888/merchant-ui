@@ -6,9 +6,9 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	overflow: hidden;
-	padding: 48rpx 32rpx 80rpx;
+	padding: 450rpx 32rpx 80rpx;
 	box-sizing: border-box;
 	background: linear-gradient(180deg, #FFF7EE 0%, #FDF0E0 30%, #FAE5CC 60%, #F5D8B8 100%);
 }
@@ -46,159 +46,31 @@
 	background: radial-gradient(ellipse at 50% 0%, rgba(220, 180, 140, 0.3) 0%, transparent 70%);
 }
 
-.tea-cup {
-	position: relative;
-	width: 320rpx;
-	height: 340rpx;
-	margin-bottom: 48rpx;
+.login-logo {
+  position: absolute;
+  top: 200rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 660rpx;
+  height: 660rpx;
+  z-index: 10;
 }
 
-.tea-cup__top {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	z-index: 2;
-}
-
-.tea-cup__cream {
-	position: relative;
-	width: 240rpx;
-	height: 60rpx;
-	margin: 0 auto 0;
-	background: linear-gradient(180deg, #FFF9F0 0%, #F5E1C8 100%);
-	border-radius: 80rpx 80rpx 30rpx 30rpx;
-	box-shadow:
-		0 -8rpx 0 #E8C8A0,
-		inset 0 4rpx 12rpx rgba(255, 255, 255, 0.8);
-	z-index: 3;
-}
-
-.tea-cup__cream-drip {
-	position: absolute;
-	bottom: -28rpx;
-	width: 28rpx;
-	height: 36rpx;
-	background: linear-gradient(180deg, #F5E1C8 0%, #ECD0AE 100%);
-	border-radius: 0 0 20rpx 20rpx;
-}
-
-.tea-cup__cream-drip--1 {
-	left: 36rpx;
-}
-
-.tea-cup__cream-drip--2 {
-	left: 50%;
-	transform: translateX(-50%);
-}
-
-.tea-cup__cream-drip--3 {
-	right: 36rpx;
-}
-
-.tea-cup__body {
-	position: relative;
-	width: 280rpx;
-	height: 240rpx;
-	margin: -16rpx auto 0;
-	background: rgba(255, 255, 255, 0.55);
-	border-radius: 20rpx 20rpx 60rpx 60rpx;
-	border: 2rpx solid rgba(180, 140, 110, 0.3);
-	overflow: hidden;
-	box-shadow:
-		0 8rpx 32rpx rgba(140, 100, 60, 0.12),
-		inset 0 4rpx 20rpx rgba(255, 255, 255, 0.6);
-}
-
-.tea-cup__tea {
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	height: 65%;
-	background: linear-gradient(180deg, #D4A574 0%, #C4956A 30%, #B8865E 100%);
-}
-
-.tea-boba {
-	position: absolute;
-	border-radius: 50%;
-	background: radial-gradient(circle at 35% 35%, #5D4037 0%, #3E2723 100%);
-	box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.15);
-}
-
-.tea-boba--1 {
-	width: 28rpx;
-	height: 28rpx;
-	bottom: 56rpx;
-	left: 50rpx;
-}
-
-.tea-boba--2 {
-	width: 24rpx;
-	height: 24rpx;
-	bottom: 72rpx;
-	left: 100rpx;
-}
-
-.tea-boba--3 {
-	width: 26rpx;
-	height: 26rpx;
-	bottom: 44rpx;
-	left: 140rpx;
-}
-
-.tea-boba--4 {
-	width: 22rpx;
-	height: 22rpx;
-	bottom: 80rpx;
-	left: 170rpx;
-}
-
-.tea-boba--5 {
-	width: 24rpx;
-	height: 24rpx;
-	bottom: 60rpx;
-	left: 200rpx;
-}
-
-.tea-boba--6 {
-	width: 26rpx;
-	height: 26rpx;
-	bottom: 90rpx;
-	left: 130rpx;
-}
-
-.tea-cup__straw {
-	position: absolute;
-	top: -120rpx;
-	left: 50%;
-	width: 8rpx;
-	height: 140rpx;
-	background: linear-gradient(180deg, #FFCC80 0%, #FF9800 100%);
-	border-radius: 4rpx;
-	transform: translateX(-50%) rotate(-15deg);
-	transform-origin: bottom center;
-	border: 1rpx solid rgba(230, 140, 40, 0.3);
-}
-
-.tea-cup__shine {
-	position: absolute;
-	top: 100rpx;
-	left: 50rpx;
-	width: 60rpx;
-	height: 24rpx;
-	background: rgba(255, 255, 255, 0.5);
-	border-radius: 50%;
-	transform: rotate(-20deg);
-	z-index: 4;
+.login-content {
+  margin-top: 500rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .login-brand {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 12rpx;
-	margin-bottom: 48rpx;
+	gap: 0;
+	margin-top: 110rpx;
+	margin-bottom: 56rpx;
 }
 
 .login-brand__name {
@@ -210,9 +82,30 @@
 }
 
 .login-brand__slogan {
-	font-size: 28rpx;
-	color: #8D6E63;
-	letter-spacing: 4rpx;
+	font-size: 26rpx;
+	color: #A0806A;
+	letter-spacing: 8rpx;
+	margin-top: 16rpx;
+	position: relative;
+	padding: 0 40rpx;
+
+	&::before,
+	&::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		width: 48rpx;
+		height: 2rpx;
+		background: linear-gradient(90deg, transparent, #C8A888, transparent);
+	}
+
+	&::before {
+		left: -40rpx;
+	}
+
+	&::after {
+		right: -40rpx;
+	}
 }
 
 .login-button {
@@ -283,9 +176,15 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8rpx;
+	gap: 0rpx;
 	margin-top: 28rpx;
 	margin-bottom: 20rpx;
+}
+
+.login-agreement__left {
+	display: flex;
+	align-items: center;
+	gap: 8rpx;
 }
 
 .agreement-checkbox {
@@ -312,10 +211,22 @@
 
 .agreement-text {
 	font-size: 24rpx;
+	line-height: 32rpx;
 	color: #BCAAA4;
 }
 
 .agreement-link {
 	font-size: 24rpx;
+	line-height: 32rpx;
 	color: #8D6E63;
+	text-decoration: underline;
+	transition: all 0.2s ease;
+}
+
+.agreement-link:active {
+	background: linear-gradient(135deg, #D4A574 0%, #B8865E 50%, #8D6E63 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	text-decoration: underline;
 }

@@ -8,6 +8,7 @@
         @tap="handleTabChange(tab.value)"
       >
         {{ tab.label }}
+        <text v-if="tab.count > 0" :class="['tab-count', { 'tab-count--active': activeFilter === tab.value }]">{{ tab.count }}</text>
       </view>
     </view>
 
@@ -83,7 +84,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
-import { createOrderPayment, listOrders, cancelOrder } from '@/api/orders'
+import { createOrderPayment, listOrders, cancelOrder, getOrderTracking } from '@/api/orders'
 import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
 
@@ -143,7 +144,11 @@ function formatDateTime (value) {
   return `${parts.join('.')} ${time.join(':')}`
 }
 
-function getStatusMeta (status, shipmentStatus) {
+function getStatusMeta (status, shipmentStatus, isSigned) {
+  if (isSigned) {
+    return { label: '已完成', className: 'is-paid', canPay: false }
+  }
+
   if (shipmentStatus === 'shipped') {
     return { label: '已发货', className: 'is-paid', canPay: false }
   }
@@ -167,17 +172,19 @@ function getStatusMeta (status, shipmentStatus) {
   return { label: status || '状态待同步', className: 'is-neutral', canPay: false }
 }
 
-function normalizeOrders (items, productPriceMap) {
+function normalizeOrders (items, productPriceMap, signedOrderIds) {
   if (!Array.isArray(items)) {
     return []
   }
 
   const priceMap = productPriceMap || {}
+  const signedSet = new Set(signedOrderIds || [])
 
   return [...items]
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
-      const statusMeta = getStatusMeta(item?.status, item?.shipment_status)
+      const isSigned = signedSet.has(String(item?.id))
+      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, isSigned)
       const orderItems = Array.isArray(item?.items) ? item.items : []
       const totalAmount = Number(item?.total_amount || 0)
       const totalQuantity = orderItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
@@ -284,18 +291,28 @@ async function fetchOrdersWithPrices () {
     throw err
   }
 
-  console.warn('[orders] fetchOrdersWithPrices: orders count =', list?.length, 'products count =', products?.length)
-
-  if (list?.length > 0 && list[0]?.items?.length > 0) {
-    console.warn('[orders] fetchOrdersWithPrices: sample item product_id =', list[0].items[0]?.product_id, 'type =', typeof list[0].items[0]?.product_id)
-  }
-  if (products?.length > 0) {
-    console.warn('[orders] fetchOrdersWithPrices: sample product id =', products[0]?.id, 'price =', products[0]?.price, 'type =', typeof products[0]?.id)
-  }
-
   const priceMap = buildProductPriceMap(products)
+  const orders = normalizeOrders(list, priceMap)
 
-  return normalizeOrders(list, priceMap)
+  const shippedOrders = orders.filter(o => o.shipment_status === 'shipped')
+  if (shippedOrders.length > 0) {
+    const trackingResults = await Promise.allSettled(
+      shippedOrders.map(o => getOrderTracking(o.id))
+    )
+    trackingResults.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        const tracking = result.value
+        if (tracking?.is_signed || tracking?.state_label === 'signed' || tracking?.state_label === 'delivered') {
+          const order = shippedOrders[i]
+          order.statusLabel = '已完成'
+          order.statusClass = 'is-paid'
+          order.canPay = false
+        }
+      }
+    })
+  }
+
+  return orders
 }
 
 export default {
@@ -319,13 +336,21 @@ export default {
       if (countdownTimer) clearInterval(countdownTimer)
     })
 
-    const tabs = [
-      { label: '全部', value: 'all' },
-      { label: '待付款', value: 'pending' },
-      { label: '待发货', value: 'paid' },
-      { label: '待收货', value: 'shipped' },
-      { label: '已完成', value: 'completed' }
-    ]
+    const tabs = computed(() => {
+      const list = orderList.value
+      const shippedCount = list.filter(o => o.shipment_status === 'shipped' && o.statusLabel !== '已完成').length
+      const pendingCount = list.filter(o => o.status === 'pending').length
+      const paidCount = list.filter(o => o.status === 'paid' && o.shipment_status !== 'shipped').length
+      const completedCount = list.filter(o => o.status === 'completed' || (o.shipment_status === 'shipped' && o.statusLabel === '已完成')).length
+
+      return [
+        { label: '全部', value: 'all', count: list.length },
+        { label: '待付款', value: 'pending', count: pendingCount },
+        { label: '待发货', value: 'paid', count: paidCount },
+        { label: '待收货', value: 'shipped', count: shippedCount },
+        { label: '已完成', value: 'completed', count: completedCount }
+      ]
+    })
 
     const {
       data: orders,
@@ -348,10 +373,13 @@ export default {
         return orderList.value
       }
       if (activeFilter.value === 'shipped') {
-        return orderList.value.filter((item) => item.shipment_status === 'shipped')
+        return orderList.value.filter((item) => item.shipment_status === 'shipped' && item.statusLabel !== '已完成')
       }
       if (activeFilter.value === 'paid') {
         return orderList.value.filter((item) => item.status === 'paid' && item.shipment_status !== 'shipped')
+      }
+      if (activeFilter.value === 'completed') {
+        return orderList.value.filter((item) => item.status === 'completed' || (item.shipment_status === 'shipped' && item.statusLabel === '已完成'))
       }
       return orderList.value.filter((item) => item.status === activeFilter.value)
     })
