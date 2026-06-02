@@ -144,13 +144,23 @@ function formatDateTime (value) {
   return `${parts.join('.')} ${time.join(':')}`
 }
 
-function getStatusMeta (status, shipmentStatus, isSigned) {
-  if (isSigned) {
+function getStatusMeta (status, shipmentStatus, isSigned, trackingState) {
+  if (isSigned || trackingState === 'signed' || trackingState === 'delivered') {
     return { label: '已完成', className: 'is-paid', canPay: false }
   }
 
   if (shipmentStatus === 'shipped') {
-    return { label: '已发货', className: 'is-paid', canPay: false }
+    const stateMap = {
+      collecting: '待揽收',
+      collected: '已揽收',
+      delivering: '运输中',
+      out_for_delivery: '派送中',
+      failed: '异常',
+      returning: '退回中',
+      returned: '已退回',
+      cancel: '已取消'
+    }
+    return { label: stateMap[trackingState] || '待收货', className: 'is-paid', canPay: false }
   }
 
   if (status === 'paid') {
@@ -172,19 +182,19 @@ function getStatusMeta (status, shipmentStatus, isSigned) {
   return { label: status || '状态待同步', className: 'is-neutral', canPay: false }
 }
 
-function normalizeOrders (items, productPriceMap, signedOrderIds) {
+function normalizeOrders (items, productPriceMap, trackingStateMap) {
   if (!Array.isArray(items)) {
     return []
   }
 
   const priceMap = productPriceMap || {}
-  const signedSet = new Set(signedOrderIds || [])
+  const stateMap = trackingStateMap || {}
 
   return [...items]
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
-      const isSigned = signedSet.has(String(item?.id))
-      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, isSigned)
+      const trackingState = stateMap[String(item?.id)] || ''
+      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState)
       const orderItems = Array.isArray(item?.items) ? item.items : []
       const totalAmount = Number(item?.total_amount || 0)
       const totalQuantity = orderItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
@@ -210,7 +220,8 @@ function normalizeOrders (items, productPriceMap, signedOrderIds) {
         totalAmountText: formatPrice(item?.total_amount),
         statusLabel: statusMeta.label,
         statusClass: statusMeta.className,
-        canPay: statusMeta.canPay
+        canPay: statusMeta.canPay,
+        trackingState
       }
     })
 }
@@ -292,9 +303,10 @@ async function fetchOrdersWithPrices () {
   }
 
   const priceMap = buildProductPriceMap(products)
-  const orders = normalizeOrders(list, priceMap)
 
-  const shippedOrders = orders.filter(o => o.shipment_status === 'shipped')
+  const shippedOrders = list.filter(o => o.shipment_status === 'shipped')
+  const trackingStateMap = {}
+
   if (shippedOrders.length > 0) {
     const trackingResults = await Promise.allSettled(
       shippedOrders.map(o => getOrderTracking(o.id))
@@ -302,16 +314,17 @@ async function fetchOrdersWithPrices () {
     trackingResults.forEach((result, i) => {
       if (result.status === 'fulfilled') {
         const tracking = result.value
+        const orderId = String(shippedOrders[i]?.id)
         if (tracking?.is_signed || tracking?.state_label === 'signed' || tracking?.state_label === 'delivered') {
-          const order = shippedOrders[i]
-          order.statusLabel = '已完成'
-          order.statusClass = 'is-paid'
-          order.canPay = false
+          trackingStateMap[orderId] = 'signed'
+        } else if (tracking?.state_label) {
+          trackingStateMap[orderId] = tracking.state_label
         }
       }
     })
   }
 
+  const orders = normalizeOrders(list, priceMap, trackingStateMap)
   return orders
 }
 

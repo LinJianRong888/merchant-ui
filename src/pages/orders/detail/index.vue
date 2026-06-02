@@ -40,7 +40,7 @@
           </view>
           <view v-if="order.shipment_status === 'shipped' || trackingSigned" class="detail-info-item">
             <text class="detail-info-item__label">发货状态</text>
-            <text class="detail-info-item__value is-highlight">{{ trackingSigned ? '已签收' : '已发货' }}</text>
+            <text class="detail-info-item__value is-highlight">{{ stateLabelText }}</text>
           </view>
         </view>
       </view>
@@ -125,7 +125,7 @@
             <view class="timeline-item__dot"></view>
             <view class="timeline-item__content">
               <text class="timeline-item__title">商家已发货</text>
-              <text v-if="order.shipment_status === 'shipped'" class="timeline-item__time">已发货</text>
+              <text v-if="order.shipment_status === 'shipped'" class="timeline-item__time">待收货</text>
               <text class="timeline-item__desc">包裹运输中，请注意查收</text>
             </view>
           </view>
@@ -184,28 +184,56 @@
                 <text class="tracking-hero__hint">{{ heroHint }}</text>
               </view>
             </view>
-            <text v-if="estimatedArrival" class="tracking-hero__eta">{{ estimatedArrival }}</text>
+            <text v-if="estimatedDelivery" class="tracking-hero__eta">{{ estimatedDelivery }}</text>
           </view>
 
           <view class="tracking-bar">
             <view class="tracking-bar__item">
               <text class="tracking-bar__label">快递公司</text>
-              <text class="tracking-bar__value">{{ trackingData.courier_company?.name || '--' }}</text>
+              <text class="tracking-bar__value">{{ courierName }}</text>
             </view>
             <view class="tracking-bar__item">
-              <text class="tracking-bar__label">运单编号</text>
+              <text class="tracking-bar__label">快递单号</text>
               <view class="tracking-bar__value-row">
                 <text class="tracking-bar__value">{{ trackingData.tracking_no || '--' }}</text>
                 <text class="tracking-bar__copy" @tap="onCopyTrackingNo">复制</text>
               </view>
             </view>
+            <view v-if="trackingData.courier_phone" class="tracking-bar__item">
+              <text class="tracking-bar__label">快递电话</text>
+              <text class="tracking-bar__value">{{ trackingData.courier_phone }}</text>
+            </view>
             <view v-if="shippedAtText" class="tracking-bar__item">
               <text class="tracking-bar__label">发货时间</text>
               <text class="tracking-bar__value">{{ shippedAtText }}</text>
             </view>
+            <view v-if="trackingData.sender_name" class="tracking-bar__item">
+              <text class="tracking-bar__label">发件人</text>
+              <text class="tracking-bar__value">{{ trackingData.sender_name }}</text>
+            </view>
+            <view v-if="trackingData.sender_phone" class="tracking-bar__item">
+              <text class="tracking-bar__label">发件电话</text>
+              <text class="tracking-bar__value">{{ trackingData.sender_phone }}</text>
+            </view>
+            <view v-if="trackingData.recipient_name || orderAddress?.contact_name" class="tracking-bar__item">
+              <text class="tracking-bar__label">收件人</text>
+              <text class="tracking-bar__value">{{ trackingData.recipient_name || orderAddress?.contact_name || '--' }}</text>
+            </view>
             <view v-if="trackingData.receipt_info" class="tracking-bar__item">
               <text class="tracking-bar__label">签收信息</text>
               <text class="tracking-bar__value tracking-bar__value--receipt">{{ trackingData.receipt_info }}</text>
+            </view>
+            <view v-if="trackingData.origin_location" class="tracking-bar__item">
+              <text class="tracking-bar__label">发货地</text>
+              <text class="tracking-bar__value">{{ trackingData.origin_location }}</text>
+            </view>
+            <view v-if="trackingData.dest_location" class="tracking-bar__item">
+              <text class="tracking-bar__label">目的地</text>
+              <text class="tracking-bar__value">{{ trackingData.dest_location }}</text>
+            </view>
+            <view v-if="trackingData.package_weight" class="tracking-bar__item">
+              <text class="tracking-bar__label">包裹重量</text>
+              <text class="tracking-bar__value">{{ trackingData.package_weight }}</text>
             </view>
           </view>
 
@@ -224,12 +252,24 @@
                 </view>
                 <view class="tracking-trace__right">
                   <view class="tracking-trace__header">
-                    <text class="tracking-trace__status">{{ trace.status }}</text>
-                    <text v-if="trace.related_phone" class="tracking-trace__phone">{{ trace.related_phone }}</text>
+                    <text class="tracking-trace__status">{{ trace.statusText }}</text>
+                    <text v-if="trace.scan_type" class="tracking-trace__tag">{{ trace.scan_type }}</text>
+                    <text v-if="trace.action_code" class="tracking-trace__tag tracking-trace__tag--code">{{ trace.action_code }}</text>
                   </view>
-                  <text class="tracking-trace__time">{{ trace.time }}</text>
-                  <text v-if="trace.area_name" class="tracking-trace__location">{{ trace.area_name }}</text>
-                  <text v-if="trace.desc" class="tracking-trace__desc">{{ trace.desc }}</text>
+                  <text class="tracking-trace__time">{{ trace.timeText }}</text>
+                  <text v-if="trace.addressText" class="tracking-trace__address">{{ trace.addressText }}</text>
+                  <view v-if="trace.courier_name || trace.courier_phone || trace.related_name || trace.related_phone" class="tracking-trace__meta">
+                    <text v-if="trace.courier_name" class="tracking-trace__courier">快递员：{{ trace.courier_name }}</text>
+                    <text v-if="trace.courier_phone" class="tracking-trace__phone" @tap="onCallPhone(trace.courier_phone)">{{ trace.courier_phone }}</text>
+                    <text v-if="trace.related_name" class="tracking-trace__person">{{ trace.related_name }}</text>
+                    <text v-if="trace.related_phone" class="tracking-trace__phone" @tap="onCallPhone(trace.related_phone)">{{ trace.related_phone }}</text>
+                  </view>
+                  <view v-if="trace.operator || trace.station || trace.facility" class="tracking-trace__meta">
+                    <text v-if="trace.operator" class="tracking-trace__courier">操作员：{{ trace.operator }}</text>
+                    <text v-if="trace.station" class="tracking-trace__person">网点：{{ trace.station }}</text>
+                    <text v-if="trace.facility" class="tracking-trace__person">站点：{{ trace.facility }}</text>
+                  </view>
+                  <text v-if="trace.remark && trace.remark !== trace.statusText" class="tracking-trace__remark">备注：{{ trace.remark }}</text>
                 </view>
               </view>
             </view>
@@ -289,7 +329,7 @@ function formatDateTime (value) {
 
 function getStatusMeta (status, shipmentStatus, isSigned) {
   if (isSigned) return { label: '已完成', className: 'is-paid' }
-  if (shipmentStatus === 'shipped') return { label: '已发货', className: 'is-paid' }
+  if (shipmentStatus === 'shipped') return { label: '待收货', className: 'is-paid' }
   if (status === 'paid') return { label: '已支付', className: 'is-paid' }
   if (status === 'pending') return { label: '待支付', className: 'is-pending' }
   if (status === 'cancelled' || status === 'closed') return { label: '已取消', className: 'is-cancelled' }
@@ -371,6 +411,107 @@ function formatQueryError (error) {
   return lines.join('\n')
 }
 
+function extractAddressFromText () {
+  const texts = Array.from(arguments).filter(v => typeof v === 'string' && v.trim())
+  if (!texts.length) return ''
+
+  const results = []
+  const addrKeywords = /(?:路|道|街|巷|弄|里|号|楼|栋|单元|层|室|房|苑|园|村|庄|小区|广场|大厦|中心|公寓|花园|新城|花苑|家园|大楼|城|坊|桥|坡|营|口|岗|关|台|湖|岛|湾|塘|坝|坪|岭|沟|营业点|分部|网点|集散|中转|分拨|处理中心|速递|物流园)/
+  const numberPattern = /\d+/
+
+  // 括号内的内容只要长度够就收集（物流状态中的【】几乎都是地名）
+  for (const text of texts) {
+    const bracketMatches = text.match(/【(.+?)】/g)
+    if (bracketMatches) {
+      for (const bm of bracketMatches) {
+        const inner = bm.replace(/【|】/g, '').trim()
+        if (inner.length >= 3) {
+          results.push(inner)
+        }
+      }
+    }
+  }
+
+  // 也匹配没有【】但有地址关键词+数字的文本段落
+  for (const text of texts) {
+    const pattern = new RegExp(
+      '(' +
+        '(?:[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤川青藏琼](?:省|市|区)?)?' +
+        '(?:[^\\s]{1,10}?(?:市|州|盟|地区|区|县|旗))?' +
+        '\\s*' +
+        '(?:[^\\s]{1,10}?(?:区|镇|乡|街道))?' +
+        '\\s*' +
+        '[^\\s]{1,20}?' +
+        '(?:路|道|街|大道|大街|巷|弄|里)' +
+        '\\s*' +
+        '[^\\s]{1,15}?' +
+        '(?:号|楼|栋|单元|层|室|房|苑|园|村|庄|小区|广场|大厦|中心|营业点|网点|分部|集散|中转)' +
+        '\\S{0,50}' +
+      ')',
+      'g'
+    )
+    const matches = text.matchAll(pattern)
+    for (const m of matches) {
+      if (m[1] && m[1].length >= 6 && numberPattern.test(m[1])) {
+        results.push(m[1].trim())
+      }
+    }
+  }
+
+  // 路名+数字的宽松匹配
+  for (const text of texts) {
+    const words = text.split(/[，。,.\s]+/).filter(Boolean)
+    for (const word of words) {
+      if (word.length >= 5 && addrKeywords.test(word) && numberPattern.test(word)) {
+        results.push(word.trim())
+      }
+    }
+  }
+
+  for (const text of texts) {
+    const pattern = new RegExp(
+      '(' +
+        '(?:[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤川青藏琼][省区市])?' +
+        '(?:[^\\s]{1,10}?(?:市|州|盟|地区|区|县|旗))?' +
+        '\\s*' +
+        '[^\\s]{1,15}?' +
+        '(?:街道|镇|乡|路|道|街|巷|弄|里|号|楼|栋|单元|层|室|房|苑|园|村|庄)' +
+        '\\S{0,30}' +
+      ')',
+      'g'
+    )
+    const matches = text.matchAll(pattern)
+    for (const m of matches) {
+      if (m[1] && m[1].length >= 5 && numberPattern.test(m[1])) {
+        results.push(m[1].trim())
+      }
+    }
+  }
+
+  for (const text of texts) {
+    const pattern = /(\d+号(?:楼|栋|层|室|房|单元|\s|$)?\S{0,20})/g
+    const matches = text.matchAll(pattern)
+    for (const m of matches) {
+      if (m[1]) results.push(m[1].trim())
+    }
+  }
+
+  return results.join(' ')
+}
+
+function buildDetailAddress (trace) {
+  const detailParts = []
+  if (trace.address_detail) detailParts.push(trace.address_detail)
+  if (trace.detail) detailParts.push(trace.detail)
+  if (trace.house_number || trace.house_no) detailParts.push(trace.house_number || trace.house_no)
+  if (trace.building || trace.building_no) detailParts.push(trace.building || trace.building_no)
+  if (trace.door_no) detailParts.push(trace.door_no)
+  if (trace.floor) detailParts.push(trace.floor)
+  if (trace.room) detailParts.push(trace.room)
+  if (trace.unit) detailParts.push(trace.unit)
+  return detailParts.join(' ')
+}
+
 export default {
   setup () {
     const orderId = ref('')
@@ -383,7 +524,17 @@ export default {
 
     const trackingSigned = computed(() => {
       const label = trackingData.value?.state_label
-      return trackingData.value?.is_signed || label === 'signed' || label === 'delivered'
+      if (trackingData.value?.is_signed || label === 'signed' || label === 'delivered') {
+        return true
+      }
+      if (trackingData.value?.traces && trackingData.value.traces.length > 0) {
+        const latest = trackingData.value.traces[0]
+        const text = (latest.status || latest.context || latest.desc || latest.remark || '').toLowerCase()
+        if (text.includes('签收') || text.includes('已签收') || text.includes('代签收') || text.includes('门卫') || text.includes('前台') || text.includes('快递柜') || text.includes('驿站')) {
+          return true
+        }
+      }
+      return false
     })
 
     function fetchTrackingIfNeeded (orderData) {
@@ -462,11 +613,138 @@ export default {
           dotClass = 'tracking-trace__dot--start'
           icon = '📦'
         }
-        return { ...t, dotClass, icon }
+        const statusText = t.status || t.context || t.desc || t.remark || ''
+        const timeText = t.time || t.ftime || ''
+
+        let addressText = ''
+
+        const structParts = []
+        if (t.province) structParts.push(t.province)
+        if (t.city) structParts.push(t.city)
+        if (t.district) structParts.push(t.district)
+        if (t.street) structParts.push(t.street)
+        if (t.area_name) structParts.push(t.area_name)
+        if (t.area_center) structParts.push(t.area_center)
+        const structAddr = structParts.join('')
+
+        if (t.address && typeof t.address === 'string' && t.address.trim().length >= 5) {
+          addressText = t.address.trim()
+        } else if (t.addr && typeof t.addr === 'string' && t.addr.trim().length >= 5) {
+          addressText = t.addr.trim()
+        } else if (t.location && typeof t.location === 'string' && t.location.trim().length >= 5) {
+          addressText = t.location.trim()
+        } else if (t.area_detail && typeof t.area_detail === 'string' && t.area_detail.trim().length >= 5) {
+          addressText = t.area_detail.trim()
+        }
+
+        if (structAddr && !addressText.includes(structAddr)) {
+          addressText = addressText ? structAddr + ' ' + addressText : structAddr
+        }
+
+        const detail = buildDetailAddress(t)
+        if (detail && !addressText.includes(detail)) {
+          addressText = addressText ? addressText + ' ' + detail : detail
+        }
+
+        if (!addressText) {
+          addressText = structAddr
+        }
+
+        const extractedDetail = extractAddressFromText(
+          statusText,
+          t.context || '',
+          t.desc || '',
+          t.remark || '',
+          t.address || '',
+          t.addr || '',
+          t.location || '',
+          t.area_name || '',
+          t.area_center || '',
+          t.street || '',
+          t.station || '',
+          t.facility || '',
+          t.area_detail || ''
+        )
+        if (extractedDetail) {
+          const pieces = extractedDetail.split(/\s+/).filter(Boolean)
+          for (const piece of pieces) {
+            if (!addressText.includes(piece)) {
+              addressText = addressText ? addressText + ' ' + piece : piece
+            }
+          }
+        }
+
+        if (!/\d/.test(addressText) && statusText && statusText.length >= 4) {
+          const extraFromStatus = extractAddressFromText(statusText)
+          if (extraFromStatus) {
+            const pieces = extraFromStatus.split(/\s+/).filter(Boolean)
+            for (const piece of pieces) {
+              if (!addressText.includes(piece)) {
+                addressText = addressText ? addressText + ' ' + piece : piece
+              }
+            }
+          }
+          if (!/\d/.test(addressText)) {
+            addressText = addressText ? addressText + ' | ' + statusText : statusText
+          }
+        }
+
+        return {
+          ...t,
+          dotClass,
+          icon,
+          statusText,
+          timeText,
+          addressText,
+          actionCode: t.action_code || t.opcode || t.code || '',
+          courierPhone: t.courier_phone || '',
+          operator: t.operator || t.operator_name || t.handler || '',
+          station: t.station || t.station_name || t.branch || '',
+          facility: t.facility || t.facility_name || t.hub || t.warehouse || '',
+          remark: t.remark || t.note || t.comment || ''
+        }
       })
     })
 
+    function inferStateFromTraces () {
+      if (!trackingData.value?.traces || trackingData.value.traces.length === 0) {
+        return trackingData.value?.state_label || ''
+      }
+      const latest = trackingData.value.traces[0]
+      const text = (latest.status || latest.context || latest.desc || latest.remark || '').toLowerCase()
+      if (text.includes('签收') || text.includes('已签收') || text.includes('代签收') || text.includes('门卫') || text.includes('前台') || text.includes('快递柜') || text.includes('驿站')) {
+        return 'signed'
+      }
+      if (text.includes('派送') || text.includes('配送') || text.includes('正在派') || text.includes('快递员')) {
+        return 'out_for_delivery'
+      }
+      if (text.includes('运输') || text.includes('发往') || text.includes('离开') || text.includes('到达') || text.includes('中转')) {
+        return 'delivering'
+      }
+      if (text.includes('揽收') || text.includes('收件') || text.includes('取件')) {
+        return 'collected'
+      }
+      if (text.includes('退回') || text.includes('退件')) {
+        return 'returning'
+      }
+      if (text.includes('异常') || text.includes('问题') || text.includes('滞留')) {
+        return 'failed'
+      }
+      return trackingData.value?.state_label || ''
+    }
+
+    const inferredState = computed(() => {
+      const label = trackingData.value?.state_label
+      if (label === 'signed' || label === 'delivered' || trackingData.value?.is_signed) {
+        return 'signed'
+      }
+      const fromTrace = inferStateFromTraces()
+      if (fromTrace) return fromTrace
+      return label || 'delivering'
+    })
+
     const iconLarge = computed(() => {
+      const state = inferredState.value
       const map = {
         collecting: '📦',
         collected: '🚚',
@@ -479,11 +757,12 @@ export default {
         returned: '↩',
         cancel: '✕'
       }
-      return map[trackingData.value?.state_label] || '✅'
+      return map[state] || '✅'
     })
 
     const heroStatus = computed(() => {
       if (!trackingData.value) return '运输中'
+      const state = inferredState.value
       const map = {
         collecting: '等待揽收',
         collected: '已揽收',
@@ -496,11 +775,12 @@ export default {
         cancel: '已取消',
         signed: '已签收'
       }
-      return map[trackingData.value.state_label] || '已签收'
+      return map[state] || '已签收'
     })
 
     const heroHint = computed(() => {
       if (!trackingData.value) return ''
+      const state = inferredState.value
       const map = {
         collecting: '包裹正在等待快递员揽收',
         collected: '包裹已交由快递公司，即将发往目的地',
@@ -513,14 +793,26 @@ export default {
         returned: '包裹已退回发货方',
         cancel: '物流已取消'
       }
-      return map[trackingData.value.state_label] || ''
+      return map[state] || ''
     })
 
-    const estimatedArrival = computed(() => {
+    const courierName = computed(() => {
+      const company = trackingData.value?.courier_company
+      if (!company) return '--'
+      if (typeof company === 'string') return company
+      return company.name || company.company_name || company.title || '--'
+    })
+
+    const estimatedDelivery = computed(() => {
       if (!trackingData.value || trackingData.value.is_signed) return ''
-      if (trackingTraces.value.length > 0) {
-        return '预计 1-2 天内送达'
+      const edt = trackingData.value.estimated_delivery_time
+        || trackingData.value.predicted_delivery_time
+        || trackingData.value.estimated_delivery_date
+      if (edt) {
+        if (typeof edt === 'string') return edt
+        return formatDateTime(edt)
       }
+      if (trackingTraces.value.length > 0) return '预计 1-2 天内送达'
       return ''
     })
 
@@ -530,20 +822,20 @@ export default {
     })
 
     const stateLabelText = computed(() => {
-      const label = trackingData.value?.state_label
-      if (!label) return '运输中'
+      const state = inferredState.value
       const map = {
         collecting: '待揽收',
         collected: '已揽收',
         delivering: '运输中',
         out_for_delivery: '派送中',
         delivered: '已签收',
+        signed: '已签收',
         failed: '异常',
         returning: '退回中',
         returned: '已退回',
         cancel: '已取消'
       }
-      return map[label] || label
+      return map[state] || state
     })
 
     const shippedAtText = computed(() => {
@@ -633,6 +925,11 @@ export default {
       showTrackingPanel.value = true
       isTrackingLoading.value = true
       getOrderTracking(order.value.id).then((data) => {
+        console.log('[tracking] raw data:', JSON.stringify(data))
+        if (data?.traces && data.traces.length > 0) {
+          console.log('[tracking] first trace keys:', Object.keys(data.traces[0]))
+          console.log('[tracking] first trace:', JSON.stringify(data.traces[0]))
+        }
         trackingData.value = data
         isTrackingLoading.value = false
       }).catch((err) => {
@@ -654,6 +951,21 @@ export default {
           }
         })
       }
+    }
+
+    function onCallPhone (phone) {
+      if (!phone) return
+      Taro.makePhoneCall({
+        phoneNumber: String(phone).replace(/\s/g, ''),
+        fail: () => {
+          Taro.setClipboardData({
+            data: String(phone),
+            success: () => {
+              Taro.showToast({ title: '电话已复制', icon: 'success' })
+            }
+          })
+        }
+      })
     }
 
     useLoad((params) => {
@@ -700,14 +1012,16 @@ export default {
       isTrackingLoading,
       trackingTraces,
       trackingSigned,
+      courierName,
       iconLarge,
       heroStatus,
       heroHint,
-      estimatedArrival,
+      estimatedDelivery,
       signedText,
       stateLabelText,
       shippedAtText,
       onCopyTrackingNo,
+      onCallPhone,
       statusMeta
     }
   }

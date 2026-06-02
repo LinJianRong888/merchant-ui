@@ -11,6 +11,7 @@ export default defineAppConfig({
     'pages/user/addresses/index',
     'pages/user/addresses/edit/index',
     'pages/user/agreement/index',
+    'pages/user/ice-machine/index',
     'pages/index/index'
   ],
   window: {

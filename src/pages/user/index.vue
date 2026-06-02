@@ -96,6 +96,13 @@
     </view>
 
     <view class="menu-section">
+      <view class="menu-item" @tap="goToIceMachine">
+        <view class="menu-left">
+          <text class="menu-icon">❄️</text>
+          <text class="menu-text">制冰机</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
       <view class="menu-item" @tap="showComingSoon">
         <view class="menu-left">
           <text class="menu-icon">🎫</text>
@@ -142,6 +149,7 @@ import './index.scss'
 const ADDRESSES_PAGE = '/pages/user/addresses/index'
 const ORDERS_PAGE = '/pages/orders/index'
 const LOGIN_PAGE = '/pages/index/index'
+const ICE_MACHINE_PAGE = '/pages/user/ice-machine/index'
 
 const STORAGE_AVATAR_KEY = 'user_avatar_url'
 
@@ -314,6 +322,10 @@ export default {
       })
     }
 
+    function goToIceMachine() {
+      Taro.navigateTo({ url: ICE_MACHINE_PAGE })
+    }
+
     function showComingSoon() {
       Taro.showToast({ title: '功能开发中，敬请期待', icon: 'none' })
     }
@@ -334,6 +346,7 @@ export default {
       goToLogin,
       goToAddresses,
       goToOrders,
+      goToIceMachine,
       handleLogout,
       showComingSoon
     }
