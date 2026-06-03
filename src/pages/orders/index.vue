@@ -54,7 +54,6 @@
               <text class="product-desc">{{ item.description || '' }}</text>
               <view class="product-bottom">
                 <text class="product-quantity">x{{ item.quantity || 1 }}</text>
-                <text class="product-price">¥{{ Number(item._displayAmount || 0).toFixed(2) }}</text>
               </view>
             </view>
           </view>
@@ -85,7 +84,6 @@ import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, listOrders, cancelOrder, getOrderTracking } from '@/api/orders'
-import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
@@ -178,7 +176,7 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backend
     return { label: '处理中', className: 'is-paid', canPay: false }
   }
 
-  if (status === 'cancelled' || status === 'closed') {
+  if (status === 'cancelled') {
     return { label: '已取消', className: 'is-cancelled', canPay: false }
   }
 
@@ -186,21 +184,21 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backend
     return { label: '已完成', className: 'is-paid', canPay: false }
   }
 
-  return { label: status || '状态待同步', className: 'is-neutral', canPay: false }
+  return { label: '状态待同步', className: 'is-neutral', canPay: false }
 }
 
-function normalizeOrders (items, productPriceMap, trackingStateMap) {
+function normalizeOrders (items, trackingStateMap) {
   if (!Array.isArray(items)) {
     return []
   }
 
-  const priceMap = productPriceMap || {}
   const stateMap = trackingStateMap || {}
 
   return [...items]
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
       const trackingState = stateMap[String(item?.id)] || ''
+<<<<<<< HEAD
       const backendLabel = item?.status_label || item?.status_display || item?.display_status || item?.shipment_status_label || ''
       const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState, backendLabel)
       const orderItems = Array.isArray(item?.items) ? item.items : []
@@ -219,10 +217,12 @@ function normalizeOrders (items, productPriceMap, trackingStateMap) {
           _displayAmount: lineAmount || unitPrice * quantity || fallbackAmount
         }
       })
+=======
+      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState)
+>>>>>>> 53c9cb3981d93690cd7d1764c175d83e93da85cb
 
       return {
         ...item,
-        items: enrichedItems,
         orderNoText: item?.order_no || `订单 #${item?.id || '--'}`,
         createdAtText: formatDateTime(item?.created_at),
         totalAmountText: formatPrice(item?.total_amount),
@@ -260,57 +260,8 @@ async function invokeWechatPayment (paymentPayload) {
   })
 }
 
-function buildProductPriceMap (products) {
-  const map = {}
-
-  if (!Array.isArray(products)) {
-    console.warn('[orders] buildProductPriceMap: products is not array', typeof products)
-    return map
-  }
-
-  console.warn('[orders] buildProductPriceMap: products count =', products.length)
-
-  products.forEach((p) => {
-    if (p?.id != null) {
-      const price = Number(p.price || 0)
-      map[p.id] = price
-      map[String(p.id)] = price
-    }
-  })
-
-  console.warn('[orders] buildProductPriceMap result keys:', Object.keys(map))
-
-  return map
-}
-
-async function fetchOrdersWithPrices () {
-  let list
-  let products = []
-
-  try {
-    const results = await Promise.allSettled([
-      listOrders(),
-      listSaleProducts()
-    ])
-
-    if (results[0].status === 'fulfilled') {
-      list = results[0].value
-    } else {
-      console.error('[orders] listOrders failed:', results[0].reason?.message)
-      throw results[0].reason
-    }
-
-    if (results[1].status === 'fulfilled') {
-      products = results[1].value
-    } else {
-      console.warn('[orders] listSaleProducts failed, using total_amount fallback:', results[1].reason?.message)
-    }
-  } catch (err) {
-    console.error('[orders] fetchOrdersWithPrices failed:', err?.message || err)
-    throw err
-  }
-
-  const priceMap = buildProductPriceMap(products)
+async function fetchOrders () {
+  const list = await listOrders()
 
   const shippedOrders = list.filter(o => o.shipment_status === 'shipped')
   const trackingStateMap = {}
@@ -332,8 +283,7 @@ async function fetchOrdersWithPrices () {
     })
   }
 
-  const orders = normalizeOrders(list, priceMap, trackingStateMap)
-  return orders
+  return normalizeOrders(list, trackingStateMap)
 }
 
 export default {
@@ -386,7 +336,7 @@ export default {
       refetch
     } = useAppQuery({
       queryKey: ['orders', 'v3'],
-      queryFn: fetchOrdersWithPrices,
+      queryFn: fetchOrders,
       enabled: computed(() => authStore.isAuthenticated)
     })
 
@@ -412,7 +362,7 @@ export default {
     async function loadOrdersDirect () {
       console.info('[orders-page] fallback load start')
       fallbackError.value = null
-      fallbackOrders.value = await fetchOrdersWithPrices()
+      fallbackOrders.value = await fetchOrders()
       console.info('[orders-page] fallback load success', {
         count: fallbackOrders.value.length
       })

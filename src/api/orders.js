@@ -33,10 +33,6 @@ function ensureSuccessResponse (response, fallbackMessage, requestMeta) {
 }
 
 export async function createSaleOrder ({ productId, quantity, products, address }) {
-  if (!address) {
-    throw new Error('地址参数必填')
-  }
-
   const items = []
 
   if (products && products.length > 0) {

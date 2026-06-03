@@ -1,0 +1,74 @@
+.invite-entry-page {
+  min-height: 100vh;
+  padding: 48rpx 24rpx;
+  background:
+    radial-gradient(circle at top right, rgb(255 222 173 / 70%), transparent 35%),
+    linear-gradient(180deg, #fff8ee 0%, #f5f7fa 100%);
+  box-sizing: border-box;
+}
+
+.invite-entry-card {
+  background: rgb(255 255 255 / 92%);
+  border-radius: 28rpx;
+  padding: 36rpx 28rpx;
+  box-shadow: 0 20rpx 50rpx rgb(15 23 42 / 8%);
+  backdrop-filter: blur(8rpx);
+}
+
+.invite-entry-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: #111827;
+  color: #fff;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+}
+
+.invite-entry-title {
+  display: block;
+  margin-top: 24rpx;
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.invite-entry-desc {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #4b5563;
+}
+
+.invite-entry-panel {
+  margin-top: 32rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: #f8fafc;
+}
+
+.invite-entry-row + .invite-entry-row {
+  margin-top: 20rpx;
+}
+
+.invite-entry-label {
+  display: block;
+  font-size: 22rpx;
+  color: #6b7280;
+  letter-spacing: 1rpx;
+}
+
+.invite-entry-value {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 30rpx;
+  line-height: 1.6;
+  color: #111827;
+  word-break: break-all;
+}
+
+.invite-entry-value--muted {
+  color: #9ca3af;
+}

@@ -5,7 +5,8 @@ import {
   createOrderPayment,
   getOrderDetail,
   listOrders,
-  cancelOrder
+  cancelOrder,
+  getOrderTracking
 } from '@/api/orders'
 
 describe('orders API', () => {
@@ -60,13 +61,6 @@ describe('orders API', () => {
         address: mockAddress
       })
       expect(result.id).toBe(2)
-    })
-
-    it('缺少地址参数应抛出错误', async () => {
-      await expect(createSaleOrder({
-        productId: 1,
-        quantity: 1
-      })).rejects.toThrow('地址参数必填')
     })
 
     it('缺少商品参数应抛出错误', async () => {
@@ -167,6 +161,54 @@ describe('orders API', () => {
       await cancelOrder(1)
 
       expect(request.post).toHaveBeenCalledWith('/api/v1/orders/1/cancel/')
+    })
+  })
+
+  describe('getOrderTracking', () => {
+    it('应请求指定订单的物流信息', async () => {
+      const mockTracking = {
+        order_id: 10,
+        order_no: 'SL1234567890ABCDEF1234',
+        shipment_status: 'shipped',
+        tracking_no: 'SF1234567890',
+        courier_company: {
+          id: 1,
+          name: '顺丰速运',
+          kuaidi100_code: 'shunfeng'
+        },
+        state_label: 'out_for_delivery',
+        is_signed: false,
+        traces: [
+          {
+            time: '2026-05-09 12:00:00',
+            context: '快件已到达派送点',
+            status: '快件已到达派送点',
+            area_code: 'CN440305000000',
+            area_name: '广东省深圳市南山区'
+          }
+        ]
+      }
+
+      request.get.mockResolvedValue({
+        statusCode: 200,
+        data: mockTracking
+      })
+
+      const result = await getOrderTracking(10)
+
+      expect(request.get).toHaveBeenCalledWith('/api/v1/orders/10/tracking/')
+      expect(result.order_id).toBe(10)
+      expect(result.state_label).toBe('out_for_delivery')
+      expect(result.traces).toHaveLength(1)
+    })
+
+    it('后端返回错误时应抛出错误', async () => {
+      request.get.mockResolvedValue({
+        statusCode: 403,
+        data: { detail: '无权查询该订单物流' }
+      })
+
+      await expect(getOrderTracking(999)).rejects.toThrow('无权查询该订单物流')
     })
   })
 })
