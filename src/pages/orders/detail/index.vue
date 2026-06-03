@@ -151,7 +151,7 @@
         <button class="detail-pay-button" :loading="isPaying" @tap="handlePay">继续支付</button>
       </view>
 
-      <view v-else-if="order.status !== 'cancelled' && order.status !== 'closed'" class="detail-footer">
+      <view v-else-if="order.status !== 'cancelled'" class="detail-footer">
         <button class="detail-action-btn detail-action-btn--after-sale" @tap="handleApplyAfterSale">申请售后</button>
         <button class="detail-action-btn detail-action-btn--service" @tap="handleContactService">咨询客服</button>
         <button v-if="showLogistics" class="detail-action-btn detail-action-btn--logistics" @tap="handleViewLogistics">查看物流</button>
@@ -332,9 +332,9 @@ function getStatusMeta (status, shipmentStatus, isSigned) {
   if (shipmentStatus === 'shipped') return { label: '待收货', className: 'is-paid' }
   if (status === 'paid') return { label: '已支付', className: 'is-paid' }
   if (status === 'pending') return { label: '待支付', className: 'is-pending' }
-  if (status === 'cancelled' || status === 'closed') return { label: '已取消', className: 'is-cancelled' }
+  if (status === 'cancelled') return { label: '已取消', className: 'is-cancelled' }
   if (status === 'completed') return { label: '已完成', className: 'is-paid' }
-  return { label: status || '状态待同步', className: 'is-neutral' }
+  return { label: '状态待同步', className: 'is-neutral' }
 }
 
 function getOrderTypeLabel (orderType) {
@@ -395,7 +395,7 @@ function formatItemSubtotal (item) {
 }
 
 function getTimelineStep (order) {
-  if (order?.status === 'cancelled' || order?.status === 'closed') return 'cancelled'
+  if (order?.status === 'cancelled') return 'cancelled'
   if (order?.status === 'completed') return 'completed'
   if (order?.shipment_status === 'shipped') return 'shipped'
   if (order?.status === 'paid') return 'paid'
@@ -835,7 +835,7 @@ export default {
         returned: '已退回',
         cancel: '已取消'
       }
-      return map[state] || state
+      return map[state] || '运输中'
     })
 
     const shippedAtText = computed(() => {

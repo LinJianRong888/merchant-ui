@@ -24,7 +24,7 @@ pnpm test tests/api/orders.test.js  # 运行单个文件
 | 文件 | 用例数 | 覆盖内容 |
 |------|--------|----------|
 | `tests/api/products.test.js` | 5 | 商品列表(sale mode/空数据/错误)、商品详情 |
-| `tests/api/orders.test.js` | 10 | 创建订单(单商品/多商品/参数校验/错误)、支付参数、详情、列表、取消 |
+| `tests/api/orders.test.js` | 11 | 创建订单(单商品/多商品/参数校验/错误)、支付参数、详情、列表、取消、物流追踪 |
 | `tests/api/user-addresses.test.js` | 6 | 地址 CRUD(列表/详情/创建/更新/删除/错误) |
 
 ## 测试原理
