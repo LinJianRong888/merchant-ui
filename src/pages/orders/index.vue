@@ -198,7 +198,6 @@ function normalizeOrders (items, trackingStateMap) {
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
       const trackingState = stateMap[String(item?.id)] || ''
-<<<<<<< HEAD
       const backendLabel = item?.status_label || item?.status_display || item?.display_status || item?.shipment_status_label || ''
       const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState, backendLabel)
       const orderItems = Array.isArray(item?.items) ? item.items : []
@@ -217,9 +216,6 @@ function normalizeOrders (items, trackingStateMap) {
           _displayAmount: lineAmount || unitPrice * quantity || fallbackAmount
         }
       })
-=======
-      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState)
->>>>>>> 53c9cb3981d93690cd7d1764c175d83e93da85cb
 
       return {
         ...item,
