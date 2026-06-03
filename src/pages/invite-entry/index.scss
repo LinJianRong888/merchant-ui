@@ -1,74 +1,210 @@
 .invite-entry-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  padding: 48rpx 24rpx;
+  padding: 48rpx 32rpx;
   background:
-    radial-gradient(circle at top right, rgb(255 222 173 / 70%), transparent 35%),
+    radial-gradient(circle at top right, rgb(255 222 173 / 70%), transparent 40%),
     linear-gradient(180deg, #fff8ee 0%, #f5f7fa 100%);
   box-sizing: border-box;
 }
 
-.invite-entry-card {
-  background: rgb(255 255 255 / 92%);
-  border-radius: 28rpx;
-  padding: 36rpx 28rpx;
-  box-shadow: 0 20rpx 50rpx rgb(15 23 42 / 8%);
-  backdrop-filter: blur(8rpx);
-}
+/* ---- 落地卡片 ---- */
 
-.invite-entry-badge {
-  display: inline-flex;
+.invite-card {
+  width: 100%;
+  max-width: 640rpx;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 8rpx 18rpx;
-  border-radius: 999rpx;
-  background: #111827;
-  color: #fff;
-  font-size: 22rpx;
-  letter-spacing: 2rpx;
 }
 
-.invite-entry-title {
+.invite-logo {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffcc00, #ff9900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.invite-logo-text {
+  font-size: 56rpx;
+  font-weight: 800;
+  color: #fff;
+}
+
+.invite-title {
   display: block;
-  margin-top: 24rpx;
-  font-size: 42rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+}
+
+.invite-subtitle {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* ---- 邀请码 ---- */
+
+.invite-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 36rpx;
+  padding: 20rpx 32rpx;
+  border-radius: 16rpx;
+  background: #f1f5f9;
+}
+
+.invite-code-label {
+  font-size: 26rpx;
+  color: #9ca3af;
+  margin-right: 16rpx;
+}
+
+.invite-code-value {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: 4rpx;
+  font-family: monospace;
+}
+
+/* ---- 错误提示 ---- */
+
+.invite-error {
+  margin-top: 28rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  background: #fef2f2;
+  border: 1rpx solid #fca5a5;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.invite-error text {
+  font-size: 26rpx;
+  color: #dc2626;
+  line-height: 1.6;
+}
+
+/* ---- 按钮 ---- */
+
+.invite-btn {
+  margin-top: 48rpx;
+  width: 100%;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: linear-gradient(135deg, #ffcc00, #ff9900);
+  color: #fff;
+  font-size: 34rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.invite-btn[disabled] {
+  opacity: 0.6;
+}
+
+.invite-footer-text {
+  margin-top: 20rpx;
+  font-size: 22rpx;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* ---- 手机号绑定 ---- */
+
+.phone-section {
+  width: 100%;
+  max-width: 640rpx;
+  margin-top: 48rpx;
+  padding: 32rpx;
+  border-radius: 20rpx;
+  background: rgb(255 255 255 / 90%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.phone-section-title {
+  font-size: 32rpx;
   font-weight: 700;
   color: #111827;
 }
 
-.invite-entry-desc {
-  display: block;
-  margin-top: 14rpx;
-  font-size: 26rpx;
-  line-height: 1.7;
-  color: #4b5563;
-}
-
-.invite-entry-panel {
-  margin-top: 32rpx;
-  padding: 24rpx;
-  border-radius: 20rpx;
-  background: #f8fafc;
-}
-
-.invite-entry-row + .invite-entry-row {
-  margin-top: 20rpx;
-}
-
-.invite-entry-label {
-  display: block;
-  font-size: 22rpx;
+.phone-section-desc {
+  font-size: 24rpx;
   color: #6b7280;
-  letter-spacing: 1rpx;
-}
-
-.invite-entry-value {
-  display: block;
   margin-top: 8rpx;
-  font-size: 30rpx;
-  line-height: 1.6;
-  color: #111827;
-  word-break: break-all;
 }
 
-.invite-entry-value--muted {
+.phone-btn {
+  margin-top: 28rpx;
+  width: 100%;
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: #07c160;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+
+.phone-btn[disabled] {
+  opacity: 0.6;
+}
+
+.phone-skip-btn {
+  margin-top: 16rpx;
   color: #9ca3af;
+  font-size: 26rpx;
+  background: transparent;
+  border: none;
+  padding: 8rpx 16rpx;
+}
+
+.phone-skip-btn::after {
+  border: none;
+}
+
+/* ---- 完成状态 ---- */
+
+.invite-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.invite-done-icon {
+  font-size: 80rpx;
+}
+
+.invite-done-title {
+  margin-top: 24rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.invite-done-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #6b7280;
 }

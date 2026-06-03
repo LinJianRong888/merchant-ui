@@ -12,7 +12,8 @@ export default defineAppConfig({
     'pages/user/addresses/edit/index',
     'pages/user/agreement/index',
     'pages/user/ice-machine/index',
-    'pages/index/index'
+    'pages/index/index',
+    'pages/invite-entry/index'
   ],
   window: {
     backgroundTextStyle: 'light',
