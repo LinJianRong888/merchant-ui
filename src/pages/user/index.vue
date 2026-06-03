@@ -63,7 +63,7 @@
               <text class="order-badge-text">{{ pendingCount }}</text>
             </view>
           </view>
-          <text class="order-label">待付款</text>
+          <text class="order-label">待处理</text>
         </view>
         <view class="order-item" @tap="goToOrders('paid')">
           <view class="order-icon-wrap">
@@ -142,7 +142,7 @@ import { ref, computed } from 'vue'
 import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser } from '@/api/users'
-import { listOrders, getOrderTracking } from '@/api/orders'
+import { listOrders } from '@/api/orders'
 import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
 import './index.scss'
 
@@ -246,7 +246,6 @@ export default {
     }
 
     // ---- 订单 ----
-    const signedOrderIds = ref(new Set())
     const {
       data: orders
     } = useAppQuery({
@@ -254,37 +253,26 @@ export default {
       queryFn: async () => {
         const response = await listOrders()
         const list = Array.isArray(response) ? response : []
-
-        const shipped = list.filter(o => o.shipment_status === 'shipped')
-        if (shipped.length > 0) {
-          const trackingResults = await Promise.allSettled(
-            shipped.map(o => getOrderTracking(o.id))
-          )
-          const signedSet = new Set()
-          trackingResults.forEach((result, i) => {
-            if (result.status === 'fulfilled') {
-              const t = result.value
-              if (t?.is_signed || t?.state_label === 'signed' || t?.state_label === 'delivered') {
-                signedSet.add(String(shipped[i].id))
-              }
-            }
-          })
-          signedOrderIds.value = signedSet
-        }
-
+        console.log('[user-center] orders raw:', JSON.stringify(list.map(o => ({ id: o.id, status: o.status, shipment_status: o.shipment_status, status_label: o.status_label })), null, 2))
         return list
       },
       enabled: computed(() => authStore.isAuthenticated)
     })
 
+    function isOrderCompleted(item) {
+      return item?.status === 'completed'
+    }
+
     const pendingCount = computed(() => (orders.value || []).filter(item => item.status === 'pending').length)
     const shippedCount = computed(() => (orders.value || []).filter(item => item.status === 'paid' && item.shipment_status !== 'shipped').length)
     const receivedCount = computed(() => (orders.value || []).filter(item => {
-      return item.shipment_status === 'shipped' && !signedOrderIds.value.has(String(item.id))
+      return item.shipment_status === 'shipped' && !isOrderCompleted(item)
     }).length)
-    const reviewedCount = computed(() => (orders.value || []).filter(item => {
-      return item.status === 'completed' || signedOrderIds.value.has(String(item.id))
-    }).length)
+    const reviewedCount = computed(() => {
+      const completed = (orders.value || []).filter(item => isOrderCompleted(item))
+      console.log('[user-center] reviewedCount completed orders:', completed.map(o => ({ id: o.id, status: o.status, shipment_status: o.shipment_status })))
+      return completed.length
+    })
 
     // ---- 生命周期 ----
     useDidShow(() => {

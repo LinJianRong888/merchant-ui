@@ -144,9 +144,12 @@ function formatDateTime (value) {
   return `${parts.join('.')} ${time.join(':')}`
 }
 
-function getStatusMeta (status, shipmentStatus, isSigned, trackingState) {
-  if (isSigned || trackingState === 'signed' || trackingState === 'delivered') {
-    return { label: '已完成', className: 'is-paid', canPay: false }
+function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backendLabel) {
+  if (backendLabel && backendLabel.trim()) {
+    const label = backendLabel.trim()
+    if (status === 'pending') return { label, className: 'is-pending', canPay: true }
+    if (status === 'cancelled' || status === 'closed') return { label, className: 'is-cancelled', canPay: false }
+    return { label, className: 'is-paid', canPay: false }
   }
 
   if (shipmentStatus === 'shipped') {
@@ -168,7 +171,11 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState) {
   }
 
   if (status === 'pending') {
-    return { label: '待支付', className: 'is-pending', canPay: true }
+    return { label: '待处理', className: 'is-pending', canPay: true }
+  }
+
+  if (status === 'processing') {
+    return { label: '处理中', className: 'is-paid', canPay: false }
   }
 
   if (status === 'cancelled' || status === 'closed') {
@@ -194,7 +201,8 @@ function normalizeOrders (items, productPriceMap, trackingStateMap) {
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
     .map((item) => {
       const trackingState = stateMap[String(item?.id)] || ''
-      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState)
+      const backendLabel = item?.status_label || item?.status_display || item?.display_status || item?.shipment_status_label || ''
+      const statusMeta = getStatusMeta(item?.status, item?.shipment_status, false, trackingState, backendLabel)
       const orderItems = Array.isArray(item?.items) ? item.items : []
       const totalAmount = Number(item?.total_amount || 0)
       const totalQuantity = orderItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0)
@@ -349,16 +357,20 @@ export default {
       if (countdownTimer) clearInterval(countdownTimer)
     })
 
+    function isOrderCompleted (item) {
+      return item?.status === 'completed'
+    }
+
     const tabs = computed(() => {
       const list = orderList.value
-      const shippedCount = list.filter(o => o.shipment_status === 'shipped' && o.statusLabel !== '已完成').length
       const pendingCount = list.filter(o => o.status === 'pending').length
       const paidCount = list.filter(o => o.status === 'paid' && o.shipment_status !== 'shipped').length
-      const completedCount = list.filter(o => o.status === 'completed' || (o.shipment_status === 'shipped' && o.statusLabel === '已完成')).length
+      const shippedCount = list.filter(o => o.shipment_status === 'shipped' && !isOrderCompleted(o)).length
+      const completedCount = list.filter(o => isOrderCompleted(o)).length
 
       return [
         { label: '全部', value: 'all', count: list.length },
-        { label: '待付款', value: 'pending', count: pendingCount },
+        { label: '待处理', value: 'pending', count: pendingCount },
         { label: '待发货', value: 'paid', count: paidCount },
         { label: '待收货', value: 'shipped', count: shippedCount },
         { label: '已完成', value: 'completed', count: completedCount }
@@ -386,13 +398,13 @@ export default {
         return orderList.value
       }
       if (activeFilter.value === 'shipped') {
-        return orderList.value.filter((item) => item.shipment_status === 'shipped' && item.statusLabel !== '已完成')
+        return orderList.value.filter((item) => item.shipment_status === 'shipped' && !isOrderCompleted(item))
       }
       if (activeFilter.value === 'paid') {
         return orderList.value.filter((item) => item.status === 'paid' && item.shipment_status !== 'shipped')
       }
       if (activeFilter.value === 'completed') {
-        return orderList.value.filter((item) => item.status === 'completed' || (item.shipment_status === 'shipped' && item.statusLabel === '已完成'))
+        return orderList.value.filter((item) => isOrderCompleted(item))
       }
       return orderList.value.filter((item) => item.status === activeFilter.value)
     })

@@ -144,6 +144,8 @@ async function baseRequest (options) {
     data: safeSerialize(response.data)
   })
 
+  console.debug(`${debugLabel} response json:`, JSON.stringify(response.data, null, 2))
+
   if (!skipAuth && response.statusCode === 401) {
     handleUnauthorizedResponse()
   }

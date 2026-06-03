@@ -38,10 +38,6 @@
             <text class="detail-info-item__label">支付时间</text>
             <text class="detail-info-item__value">{{ formatDateTime(order.paid_at) }}</text>
           </view>
-          <view v-if="order.shipment_status === 'shipped' || trackingSigned" class="detail-info-item">
-            <text class="detail-info-item__label">发货状态</text>
-            <text class="detail-info-item__value is-highlight">{{ stateLabelText }}</text>
-          </view>
         </view>
       </view>
 
@@ -108,39 +104,39 @@
           <view :class="['timeline-item', { active: isTimelineActive('created') }]">
             <view class="timeline-item__dot"></view>
             <view class="timeline-item__content">
-              <text class="timeline-item__title">订单已创建</text>
+              <text class="timeline-item__title">{{ timelineLabels.created.title }}</text>
               <text class="timeline-item__time">{{ createdAtText }}</text>
-              <text class="timeline-item__desc">订单已提交，等待付款</text>
+              <text class="timeline-item__desc">{{ timelineLabels.created.desc }}</text>
             </view>
           </view>
           <view v-if="isTimelineActive('paid')" :class="['timeline-item', { active: isTimelineActive('paid') }]">
             <view class="timeline-item__dot"></view>
             <view class="timeline-item__content">
-              <text class="timeline-item__title">买家已付款</text>
+              <text class="timeline-item__title">{{ timelineLabels.paid.title }}</text>
               <text v-if="order.paid_at" class="timeline-item__time">{{ formatDateTime(order.paid_at) }}</text>
-              <text class="timeline-item__desc">订单已支付，等待商家发货</text>
+              <text class="timeline-item__desc">{{ timelineLabels.paid.desc }}</text>
             </view>
           </view>
           <view v-if="isTimelineActive('shipped')" :class="['timeline-item', { active: isTimelineActive('shipped') }]">
             <view class="timeline-item__dot"></view>
             <view class="timeline-item__content">
-              <text class="timeline-item__title">商家已发货</text>
+              <text class="timeline-item__title">{{ timelineLabels.shipped.title }}</text>
               <text v-if="order.shipment_status === 'shipped'" class="timeline-item__time">待收货</text>
-              <text class="timeline-item__desc">包裹运输中，请注意查收</text>
+              <text class="timeline-item__desc">{{ timelineLabels.shipped.desc }}</text>
             </view>
           </view>
           <view v-if="isTimelineActive('signed')" :class="['timeline-item', { active: isTimelineActive('signed') }]">
             <view class="timeline-item__dot"></view>
             <view class="timeline-item__content">
-              <text class="timeline-item__title">已签收</text>
-              <text class="timeline-item__desc">买家已签收，交易完成</text>
+              <text class="timeline-item__title">{{ timelineLabels.signed.title }}</text>
+              <text class="timeline-item__desc">{{ timelineLabels.signed.desc }}</text>
             </view>
           </view>
           <view v-if="isTimelineActive('completed')" :class="['timeline-item', { active: isTimelineActive('completed') }]">
             <view class="timeline-item__dot"></view>
             <view class="timeline-item__content">
-              <text class="timeline-item__title">订单已完成</text>
-              <text class="timeline-item__desc">订单已签收，交易完成</text>
+              <text class="timeline-item__title">{{ timelineLabels.completed.title }}</text>
+              <text class="timeline-item__desc">{{ timelineLabels.completed.desc }}</text>
             </view>
           </view>
         </view>
@@ -327,11 +323,17 @@ function formatDateTime (value) {
   return `${y.join('.')} ${t.join(':')}`
 }
 
-function getStatusMeta (status, shipmentStatus, isSigned) {
-  if (isSigned) return { label: '已完成', className: 'is-paid' }
+function getStatusMeta (status, shipmentStatus, isSigned, backendLabel) {
+  if (backendLabel && backendLabel.trim()) {
+    const label = backendLabel.trim()
+    if (status === 'pending') return { label, className: 'is-pending' }
+    if (status === 'cancelled' || status === 'closed') return { label, className: 'is-cancelled' }
+    return { label, className: 'is-paid' }
+  }
   if (shipmentStatus === 'shipped') return { label: '待收货', className: 'is-paid' }
   if (status === 'paid') return { label: '已支付', className: 'is-paid' }
-  if (status === 'pending') return { label: '待支付', className: 'is-pending' }
+  if (status === 'pending') return { label: '待处理', className: 'is-pending' }
+  if (status === 'processing') return { label: '处理中', className: 'is-paid' }
   if (status === 'cancelled' || status === 'closed') return { label: '已取消', className: 'is-cancelled' }
   if (status === 'completed') return { label: '已完成', className: 'is-paid' }
   return { label: status || '状态待同步', className: 'is-neutral' }
@@ -395,11 +397,58 @@ function formatItemSubtotal (item) {
 }
 
 function getTimelineStep (order) {
-  if (order?.status === 'cancelled' || order?.status === 'closed') return 'cancelled'
-  if (order?.status === 'completed') return 'completed'
+  const backend = order?.status
+  if (backend === 'cancelled' || backend === 'closed') return 'cancelled'
+  if (backend === 'completed') return 'completed'
   if (order?.shipment_status === 'shipped') return 'shipped'
-  if (order?.status === 'paid') return 'paid'
+  if (backend === 'paid') return 'paid'
   return 'created'
+}
+
+function getTimelineDefaultLabels () {
+  return {
+    created: { title: '订单已创建', desc: '订单已提交，等待付款' },
+    paid: { title: '买家已付款', desc: '订单已支付，等待商家发货' },
+    shipped: { title: '商家已发货', desc: '包裹运输中，请注意查收' },
+    signed: { title: '已签收', desc: '买家已签收，交易完成' },
+    completed: { title: '订单已完成', desc: '订单已签收，交易完成' }
+  }
+}
+
+function translateTrackingState (label) {
+  if (!label || typeof label !== 'string') return label
+  const map = {
+    collecting: '待揽收',
+    collected: '已揽收',
+    transporting: '运输中',
+    delivering: '运输中',
+    in_transit: '运输中',
+    out_for_delivery: '派送中',
+    delivering_to_station: '派送中',
+    delivered: '已送达',
+    signed: '已签收',
+    received: '已签收',
+    failed: '异常',
+    exception: '异常',
+    returning: '退回中',
+    returned: '已退回',
+    cancelled: '已取消',
+    cancel: '已取消',
+    pending: '待发货',
+    shipping: '运输中',
+    shipped: '已发货',
+    picked_up: '已揽收',
+    departed: '已发出',
+    arrived: '已到达',
+    in_delivery: '派送中',
+    ready_for_pickup: '待取件',
+    pickup: '已取件',
+    expired: '已过期',
+    lost: '丢失',
+    rejected: '拒收'
+  }
+  const key = label.toLowerCase().trim()
+  return map[key] || label
 }
 
 function formatQueryError (error) {
@@ -573,6 +622,16 @@ export default {
         }
 
         if (detail) {
+          console.log('[order-status]', {
+            id: detail.id,
+            status: detail.status,
+            status_label: detail.status_label,
+            status_display: detail.status_display,
+            display_status: detail.display_status,
+            shipment_status: detail.shipment_status,
+            shipment_status_label: detail.shipment_status_label,
+            _allKeys: Object.keys(detail)
+          })
           fetchTrackingIfNeeded(detail)
         }
         return detail
@@ -582,21 +641,67 @@ export default {
 
     const errorMessage = computed(() => formatQueryError(error.value))
     const createdAtText = computed(() => formatDateTime(order.value?.created_at))
-    const statusMeta = computed(() => getStatusMeta(order.value?.status, order.value?.shipment_status, trackingSigned.value))
+    const statusMeta = computed(() => {
+      const backendLabel = order.value?.status_label
+        || order.value?.status_display
+        || order.value?.display_status
+        || order.value?.shipment_status_label
+        || ''
+      return getStatusMeta(order.value?.status, order.value?.shipment_status, trackingSigned.value, backendLabel)
+    })
     const orderTypeLabel = computed(() => getOrderTypeLabel(order.value?.order_type))
     const orderItems = computed(() => (Array.isArray(order.value?.items) ? order.value.items : []))
     const orderAddress = computed(() => order.value?.address || null)
     const fullAddressText = computed(() => orderAddress.value ? formatFullAddress(orderAddress.value) : '')
 
+    const hasShipmentStatus = computed(() => {
+      const s = order.value?.shipment_status
+      const statusLabel = order.value?.status_label || order.value?.status_display || order.value?.display_status || ''
+      return s === 'shipped' || s === 'delivered' || s === 'completed'
+        || trackingSigned.value
+        || !!statusLabel
+    })
+
     const timelineStep = computed(() => {
-      const base = getTimelineStep(order.value)
       if (trackingSigned.value) return 'signed'
-      return base
+      return getTimelineStep(order.value)
     })
 
     const showLogistics = computed(() => {
-      const step = timelineStep.value
-      return step === 'shipped' || step === 'signed' || step === 'completed'
+      if (trackingData.value) return true
+      const s = order.value?.shipment_status
+      const status = order.value?.status
+      return s === 'shipped' || s === 'delivered' || status === 'completed' || trackingSigned.value
+    })
+
+    const timelineLabels = computed(() => {
+      const defaults = getTimelineDefaultLabels()
+      const o = order.value || {}
+      const label = o.status_label || o.status_display || o.display_status || ''
+      const shipmentLabel = o.shipment_status_label || o.shipment_status_display || ''
+
+      return {
+        created: {
+          title: label || defaults.created.title,
+          desc: o.created_desc || o.status_desc || defaults.created.desc
+        },
+        paid: {
+          title: label || defaults.paid.title,
+          desc: o.paid_desc || defaults.paid.desc
+        },
+        shipped: {
+          title: shipmentLabel || label || defaults.shipped.title,
+          desc: o.shipped_desc || defaults.shipped.desc
+        },
+        signed: {
+          title: trackingSigned.value ? translateTrackingState(trackingData.value?.state_label || trackingData.value?.status_label || '已签收') : (label || defaults.signed.title),
+          desc: o.signed_desc || defaults.signed.desc
+        },
+        completed: {
+          title: label || defaults.completed.title,
+          desc: o.completed_desc || defaults.completed.desc
+        }
+      }
     })
 
     const trackingTraces = computed(() => {
@@ -706,94 +811,44 @@ export default {
       })
     })
 
-    function inferStateFromTraces () {
-      if (!trackingData.value?.traces || trackingData.value.traces.length === 0) {
-        return trackingData.value?.state_label || ''
-      }
-      const latest = trackingData.value.traces[0]
-      const text = (latest.status || latest.context || latest.desc || latest.remark || '').toLowerCase()
-      if (text.includes('签收') || text.includes('已签收') || text.includes('代签收') || text.includes('门卫') || text.includes('前台') || text.includes('快递柜') || text.includes('驿站')) {
-        return 'signed'
-      }
-      if (text.includes('派送') || text.includes('配送') || text.includes('正在派') || text.includes('快递员')) {
-        return 'out_for_delivery'
-      }
-      if (text.includes('运输') || text.includes('发往') || text.includes('离开') || text.includes('到达') || text.includes('中转')) {
-        return 'delivering'
-      }
-      if (text.includes('揽收') || text.includes('收件') || text.includes('取件')) {
-        return 'collected'
-      }
-      if (text.includes('退回') || text.includes('退件')) {
-        return 'returning'
-      }
-      if (text.includes('异常') || text.includes('问题') || text.includes('滞留')) {
-        return 'failed'
-      }
-      return trackingData.value?.state_label || ''
+    function iconForStateLabel (label) {
+      if (!label) return '📦'
+      const s = label.toLowerCase()
+      if (s.includes('签收') || s.includes('送达') || s.includes('完成')) return '✅'
+      if (s.includes('派送') || s.includes('配送')) return '🏍'
+      if (s.includes('运输') || s.includes('中转') || s.includes('发往') || s.includes('到达') || s.includes('离开')) return '🚚'
+      if (s.includes('揽收') || s.includes('取件') || s.includes('收件')) return '📦'
+      if (s.includes('待取') || s.includes('待揽') || s.includes('下单')) return '📦'
+      if (s.includes('退回') || s.includes('退件')) return '↩'
+      if (s.includes('异常') || s.includes('滞留') || s.includes('失败') || s.includes('问题件')) return '⚠'
+      if (s.includes('取消')) return '✕'
+      return '🚚'
     }
 
-    const inferredState = computed(() => {
-      const label = trackingData.value?.state_label
-      if (label === 'signed' || label === 'delivered' || trackingData.value?.is_signed) {
-        return 'signed'
-      }
-      const fromTrace = inferStateFromTraces()
-      if (fromTrace) return fromTrace
-      return label || 'delivering'
-    })
-
     const iconLarge = computed(() => {
-      const state = inferredState.value
-      const map = {
-        collecting: '📦',
-        collected: '🚚',
-        delivering: '✈',
-        out_for_delivery: '🏍',
-        delivered: '✅',
-        signed: '✅',
-        failed: '⚠',
-        returning: '↩',
-        returned: '↩',
-        cancel: '✕'
-      }
-      return map[state] || '✅'
+      const label = trackingData.value?.state_label
+        || trackingData.value?.status_label
+        || trackingData.value?.status
+        || ''
+      return iconForStateLabel(label)
     })
 
     const heroStatus = computed(() => {
-      if (!trackingData.value) return '运输中'
-      const state = inferredState.value
-      const map = {
-        collecting: '等待揽收',
-        collected: '已揽收',
-        delivering: '运输中',
-        out_for_delivery: '正在派送',
-        delivered: '已签收',
-        failed: '物流异常',
-        returning: '退回中',
-        returned: '已退回',
-        cancel: '已取消',
-        signed: '已签收'
-      }
-      return map[state] || '已签收'
+      if (!trackingData.value) return ''
+      const raw = trackingData.value?.state_label
+        || trackingData.value?.status_label
+        || trackingData.value?.status
+        || '运输中'
+      return translateTrackingState(raw)
     })
 
     const heroHint = computed(() => {
       if (!trackingData.value) return ''
-      const state = inferredState.value
-      const map = {
-        collecting: '包裹正在等待快递员揽收',
-        collected: '包裹已交由快递公司，即将发往目的地',
-        delivering: '包裹正在运输途中，请耐心等待',
-        out_for_delivery: '快递员正在为您派送，请保持电话畅通',
-        delivered: '包裹已送达，感谢您的耐心等待',
-        signed: '包裹已送达，感谢您的耐心等待',
-        failed: '物流出现异常，请联系客服处理',
-        returning: '包裹正在退回发货方',
-        returned: '包裹已退回发货方',
-        cancel: '物流已取消'
-      }
-      return map[state] || ''
+      return trackingData.value?.hint
+        || trackingData.value?.status_hint
+        || trackingData.value?.status_desc
+        || trackingData.value?.description
+        || ''
     })
 
     const courierName = computed(() => {
@@ -805,15 +860,10 @@ export default {
 
     const estimatedDelivery = computed(() => {
       if (!trackingData.value || trackingData.value.is_signed) return ''
-      const edt = trackingData.value.estimated_delivery_time
+      return trackingData.value.estimated_delivery_time
         || trackingData.value.predicted_delivery_time
         || trackingData.value.estimated_delivery_date
-      if (edt) {
-        if (typeof edt === 'string') return edt
-        return formatDateTime(edt)
-      }
-      if (trackingTraces.value.length > 0) return '预计 1-2 天内送达'
-      return ''
+        || ''
     })
 
     const signedText = computed(() => {
@@ -822,20 +872,11 @@ export default {
     })
 
     const stateLabelText = computed(() => {
-      const state = inferredState.value
-      const map = {
-        collecting: '待揽收',
-        collected: '已揽收',
-        delivering: '运输中',
-        out_for_delivery: '派送中',
-        delivered: '已签收',
-        signed: '已签收',
-        failed: '异常',
-        returning: '退回中',
-        returned: '已退回',
-        cancel: '已取消'
-      }
-      return map[state] || state
+      const backend = trackingData.value?.state_label || trackingData.value?.state || ''
+      if (backend && backend.trim()) return translateTrackingState(backend.trim())
+      const label = trackingData.value?.status_label || trackingData.value?.status || ''
+      if (label && label.trim()) return translateTrackingState(label.trim())
+      return ''
     })
 
     const shippedAtText = computed(() => {
@@ -995,6 +1036,7 @@ export default {
       handleContactService,
       handleViewLogistics,
       closeTrackingPanel,
+      hasShipmentStatus,
       isCancelling,
       isError,
       isFetching,
@@ -1008,6 +1050,7 @@ export default {
       refetch,
       showLogistics,
       showTrackingPanel,
+      timelineLabels,
       trackingData,
       isTrackingLoading,
       trackingTraces,
