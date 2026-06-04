@@ -84,6 +84,7 @@ import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, listOrders, cancelOrder, getOrderTracking } from '@/api/orders'
+import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
@@ -187,12 +188,26 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backend
   return { label: '状态待同步', className: 'is-neutral', canPay: false }
 }
 
-function normalizeOrders (items, trackingStateMap) {
+function buildProductPriceMap (products) {
+  const map = {}
+  if (!Array.isArray(products)) return map
+  products.forEach((p) => {
+    if (p?.id != null) {
+      const price = Number(p.price || 0)
+      map[p.id] = price
+      map[String(p.id)] = price
+    }
+  })
+  return map
+}
+
+function normalizeOrders (items, priceMap, trackingStateMap) {
   if (!Array.isArray(items)) {
     return []
   }
 
   const stateMap = trackingStateMap || {}
+  const priceMapObj = priceMap || {}
 
   return [...items]
     .sort((left, right) => new Date(right?.created_at || 0).getTime() - new Date(left?.created_at || 0).getTime())
@@ -208,7 +223,7 @@ function normalizeOrders (items, trackingStateMap) {
         const productId = it.product_id
         const quantity = Number(it.quantity || 0)
         const lineAmount = Number(it.line_amount || 0)
-        const unitPrice = Number(it.unit_price || (productId != null ? (priceMap[String(productId)] || priceMap[Number(productId)] || 0) : 0))
+        const unitPrice = Number(it.unit_price || (productId != null ? (priceMapObj[String(productId)] || priceMapObj[Number(productId)] || 0) : 0))
         const fallbackAmount = totalQuantity > 0 ? Math.round((quantity / totalQuantity) * totalAmount * 100) / 100 : 0
 
         return {
@@ -257,7 +272,30 @@ async function invokeWechatPayment (paymentPayload) {
 }
 
 async function fetchOrders () {
-  const list = await listOrders()
+  let list
+  let products = []
+
+  try {
+    const results = await Promise.allSettled([
+      listOrders(),
+      listSaleProducts()
+    ])
+
+    if (results[0].status === 'fulfilled') {
+      list = results[0].value
+    } else {
+      throw results[0].reason
+    }
+
+    if (results[1].status === 'fulfilled') {
+      products = results[1].value
+    }
+  } catch (err) {
+    console.error('[orders] fetchOrders failed:', err?.message || err)
+    throw err
+  }
+
+  const priceMap = buildProductPriceMap(products)
 
   const shippedOrders = list.filter(o => o.shipment_status === 'shipped')
   const trackingStateMap = {}
@@ -279,7 +317,7 @@ async function fetchOrders () {
     })
   }
 
-  return normalizeOrders(list, trackingStateMap)
+  return normalizeOrders(list, priceMap, trackingStateMap)
 }
 
 export default {
