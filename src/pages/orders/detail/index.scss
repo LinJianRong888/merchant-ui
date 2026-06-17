@@ -2,7 +2,7 @@
 
 .order-detail-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF7EE 0%, #FDF0E0 30%, #FAE5CC 60%, #F5D8B8 100%);
+  background: #F5F5F5;
   padding-bottom: 140rpx;
 }
 
@@ -584,7 +584,7 @@
   margin: 0 $spacing-2xl 20rpx;
   padding: 36rpx $spacing-2xl;
   border-radius: 20rpx;
-  background: linear-gradient(160deg, #FDF3E8 0%, #F5E6D3 40%, #EDD8C0 100%);
+  background: linear-gradient(160deg, #FAFAFA 0%, #F0F0F0 40%, #E8E8E8 100%);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;

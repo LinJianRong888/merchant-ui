@@ -1,6 +1,20 @@
 <template>
   <view class="agreement-page">
     <view class="agreement-header">
+      <view class="agreement-user">
+        <view class="agreement-user__avatar">
+          <image
+            v-if="avatarUrl"
+            :src="avatarUrl"
+            class="agreement-user__avatar-img"
+            mode="aspectFill"
+          />
+          <view v-else class="agreement-user__avatar-placeholder">
+            <text class="agreement-user__avatar-text">👤</text>
+          </view>
+        </view>
+        <text class="agreement-user__name">{{ displayName || '用户' }}</text>
+      </view>
       <text class="agreement-header__title">用户服务协议</text>
       <text class="agreement-header__subtitle">柑之怡小程序</text>
     </view>
@@ -76,9 +90,34 @@
 </template>
 
 <script>
+import { computed } from 'vue'
+import { useAppQuery } from '@/utils/app-query'
+import { useAuthStore } from '@/stores/auth'
+import { getCurrentUser } from '@/api/users'
+
 export default {
   setup () {
-    return {}
+    const authStore = useAuthStore()
+
+    const { data: userInfo } = useAppQuery({
+      queryKey: ['user-info', 'me'],
+      queryFn: getCurrentUser,
+      enabled: computed(() => authStore.isAuthenticated),
+      retry: 0
+    })
+
+    const avatarUrl = computed(() => {
+      return userInfo.value?.profile?.avatar || ''
+    })
+
+    const displayName = computed(() => {
+      return userInfo.value?.profile?.name || ''
+    })
+
+    return {
+      avatarUrl,
+      displayName
+    }
   }
 }
 </script>

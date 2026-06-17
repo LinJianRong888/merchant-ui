@@ -10,10 +10,10 @@ $color-primary-end:           #8D6E63 !default;
 $color-primary-gradient:      linear-gradient(135deg, $color-primary-start 0%, $color-primary-end 100%) !default;
 
 // ------- 背景色 -------
-$color-bg:                    #FDF3E8 !default;
-$color-bg-white:              #FFFCF9 !default;
-$color-bg-light:              #FFF7EE !default;
-$color-bg-primary-tint:       #F5E6D3 !default;
+$color-bg:                    #F5F5F5 !default;
+$color-bg-white:              #FFFFFF !default;
+$color-bg-light:              #FAFAFA !default;
+$color-bg-primary-tint:       #F0F0F0 !default;
 
 // ------- 文字色 -------
 $color-text-primary:          #4E342E !default;
@@ -75,5 +75,5 @@ $spacing-3xl:                 48rpx !default;
 $btn-height:                  80rpx !default;
 
 // ------- 骨架屏 -------
-$skeleton-base:               #F0E6D8 !default;
-$skeleton-shine:              #FAF2E8 !default;
+$skeleton-base:               #E8E8E8 !default;
+$skeleton-shine:              #F5F5F5 !default;

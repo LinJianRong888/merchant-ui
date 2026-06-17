@@ -43,7 +43,7 @@ export default defineAppConfig({
         pagePath: 'pages/cart/index',
         text: '购物车',
         iconPath: 'assets/cart.png',
-        selectedIconPath: 'assets/购物车发光.png'
+        selectedIconPath: 'assets/cart-active.png'
       },
       {
         pagePath: 'pages/user/index',

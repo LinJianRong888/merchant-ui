@@ -2,41 +2,46 @@
 
 .user-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FFF7EE 0%, #FDF0E0 30%, #FAE5CC 60%, #F5D8B8 100%);
+  background: #F5F5F5;
   padding-bottom: 100rpx;
 }
 
+/* ---- 用户头部卡片 ---- */
 .user-header {
-  background: $color-bg-white;
-  padding: 80rpx 32rpx 48rpx;
+  padding: 24rpx 24rpx 0;
 }
 
-.user-info {
+.user-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 40rpx 32rpx 36rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.04);
 }
 
-/* 未登录时的头像占位（不可点击选择） */
+/* 未登录时的头像占位 */
 .user-avatar {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 56rpx;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: $color-warning;
+  background: #f0f0f0;
+  flex-shrink: 0;
 }
 
 /* 已登录时的头像选择按钮 */
 .avatar-btn {
-  width: 120rpx !important;
-  height: 120rpx !important;
-  min-width: 120rpx !important;
-  min-height: 120rpx !important;
-  max-width: 120rpx !important;
-  max-height: 120rpx !important;
-  border-radius: 60rpx !important;
+  width: 112rpx !important;
+  height: 112rpx !important;
+  min-width: 112rpx !important;
+  min-height: 112rpx !important;
+  max-width: 112rpx !important;
+  max-height: 112rpx !important;
+  border-radius: 56rpx !important;
   overflow: hidden;
   padding: 0 !important;
   margin: 0 !important;
@@ -44,9 +49,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffcc00 !important;
+  background: #f0f0f0 !important;
   border: none !important;
   box-sizing: content-box;
+  flex-shrink: 0;
 }
 
 .avatar-btn::after {
@@ -54,24 +60,24 @@
 }
 
 .avatar-image {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 56rpx;
   display: block;
 }
 
 .avatar-placeholder {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
-  background: #ffcc00;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 56rpx;
+  background: #f0f0f0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .avatar-placeholder-text {
-  font-size: 48rpx;
+  font-size: 44rpx;
   line-height: 1;
 }
 
@@ -80,51 +86,175 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
 }
 
-.welcome-text {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: $color-text-primary;
+/* 问候行 */
+.greeting-row {
+  display: flex;
+  align-items: center;
   margin-bottom: 8rpx;
+}
+
+.greeting-icon {
+  font-size: 26rpx;
+  margin-right: 6rpx;
+}
+
+.greeting-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1;
+}
+
+/* 姓名行 */
+.name-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.user-name-input {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #222;
+  line-height: 1.2;
+  margin-right: 16rpx;
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-height: auto;
+  width: auto;
+  flex: none;
+}
+
+.user-name {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #222;
+  line-height: 1.2;
+  margin-right: 16rpx;
+}
+
+.name-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.name-edit-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.role-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rpx 16rpx;
+  border-radius: 8rpx;
+  background: #e8f0ff;
+  height: 38rpx;
+}
+
+.role-tag-text {
+  font-size: 22rpx;
+  color: #3b82f6;
+  line-height: 1;
+}
+
+/* 手机号行 */
+.phone-row {
+  display: flex;
+  align-items: center;
+}
+
+.phone-icon {
+  font-size: 24rpx;
+  margin-right: 6rpx;
 }
 
 .user-phone {
   font-size: 26rpx;
-  color: $color-text-secondary;
-  margin-bottom: 8rpx;
+  color: #888;
+  margin-right: 16rpx;
 }
 
-.user-phone-hint {
-  font-size: 26rpx;
-  color: $color-text-muted;
+.login-hint {
+  font-size: 28rpx;
+  color: #999;
 }
 
-/* 获取/更新手机号按钮 — 深色背景胶囊样式 */
-.phone-action-btn {
-  margin-top: 4rpx !important;
-  padding: 0 24rpx !important;
-  height: 52rpx !important;
-  line-height: 52rpx !important;
-  font-size: 24rpx !important;
-  color: $color-text-on-primary !important;
-  background: $color-text-primary !important;
-  border-radius: 26rpx !important;
-  border: none !important;
+.change-btn {
+  margin: 0 !important;
+  padding: 0 18rpx !important;
+  height: 44rpx !important;
+  line-height: 44rpx !important;
+  font-size: 22rpx !important;
+  color: #3b82f6 !important;
+  background: #fff !important;
+  border: 1rpx solid #3b82f6 !important;
+  border-radius: 8rpx !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: auto !important;
-  min-width: 160rpx !important;
-  max-width: 240rpx !important;
 }
 
-.phone-action-btn::after {
+.change-btn::after {
   border: none !important;
 }
 
-.phone-action-btn:active {
-  opacity: 0.8;
+.change-btn:active {
+  opacity: 0.7;
+}
+
+/* 底部地址栏 */
+.address-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-radius: 0 0 20rpx 20rpx;
+  padding: 20rpx 32rpx 24rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.address-left {
+  display: flex;
+  align-items: center;
+}
+
+.address-icon {
+  font-size: 24rpx;
+  margin-right: 6rpx;
+}
+
+.address-text {
+  font-size: 26rpx;
+  color: #555;
+}
+
+.address-right {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 20rpx;
+  border-radius: 30rpx;
+  background: #f7f9fc;
+}
+
+.daily-icon {
+  font-size: 24rpx;
+  margin-right: 6rpx;
+}
+
+.daily-text {
+  font-size: 24rpx;
+  color: #3b82f6;
 }
 
 .order-section {
@@ -181,6 +311,12 @@
   justify-content: center;
 }
 
+.order-icon-img {
+  width: 48rpx;
+  height: 48rpx;
+  margin-bottom: 12rpx;
+}
+
 .order-icon {
   font-size: 48rpx;
   margin-bottom: 12rpx;
@@ -233,6 +369,12 @@
 .menu-left {
   display: flex;
   align-items: center;
+}
+
+.menu-icon-img {
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 20rpx;
 }
 
 .menu-icon {

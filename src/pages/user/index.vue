@@ -1,8 +1,7 @@
 <template>
   <view class="user-page">
     <view class="user-header">
-      <view class="user-info">
-        <!-- 头像：点击可选择/更换（纯前端，存本地） -->
+      <view class="user-card">
         <button
           v-if="isLoggedIn"
           class="avatar-btn"
@@ -24,25 +23,70 @@
         </view>
 
         <view class="user-detail">
-          <text class="welcome-text">欢迎回来</text>
+          <!-- 问候行 -->
+          <view class="greeting-row">
+            <text class="greeting-icon">☀️</text>
+            <text class="greeting-text">{{ greetingText }}</text>
+          </view>
 
+          <!-- 姓名行 -->
           <template v-if="isLoggedIn">
-            <text v-if="profilePhone" class="user-phone">
-              {{ maskPhone(profilePhone) }}
-            </text>
-            <button
-              v-if="profilePhone && !pendingPhoneAuth"
-              class="phone-action-btn"
-              @tap="handlePhoneChange"
-            >修改手机号</button>
-            <button
-              v-else
-              class="phone-action-btn"
-              open-type="getPhoneNumber"
-              @getphonenumber="onGetPhoneNumber"
-            >{{ profilePhone ? '授权新手机号' : '获取手机号' }}</button>
+            <view class="name-row">
+              <text v-if="!isEditingNickname" class="user-name">{{ displayName || '用户' }}</text>
+              <input
+                v-else
+                class="user-name-input"
+                type="nickname"
+                :value="displayName || '用户'"
+                :placeholder="'点击填写昵称'"
+                :focus="isEditingNickname"
+                @blur="onNicknameChange"
+              />
+              <view
+                class="name-edit-btn"
+                @tap="startEditNickname"
+                v-if="!isEditingNickname"
+              >
+                <text class="name-edit-icon">✏️</text>
+              </view>
+              <view class="role-tag">
+                <text class="role-tag-text">会员</text>
+              </view>
+            </view>
           </template>
-          <text v-else class="user-phone-hint" @tap="goToLogin">点击登录</text>
+
+          <!-- 手机号行 -->
+          <template v-if="isLoggedIn">
+            <view class="phone-row">
+              <text class="phone-icon">📱</text>
+              <text class="user-phone" v-if="profilePhone">{{ maskPhone(profilePhone) }}</text>
+              <text class="user-phone" v-else>未绑定</text>
+              <button
+                v-if="!pendingPhoneAuth"
+                class="change-btn"
+                @tap="handlePhoneChange"
+              >更换</button>
+              <button
+                v-else
+                class="change-btn"
+                open-type="getPhoneNumber"
+                @getphonenumber="onGetPhoneNumber"
+              >点击授权</button>
+            </view>
+          </template>
+          <text v-else class="login-hint" @tap="goToLogin">点击登录</text>
+        </view>
+      </view>
+
+      <!-- 底部地址栏 -->
+      <view class="address-bar">
+        <view class="address-left">
+          <text class="address-icon">📍</text>
+          <text class="address-text">{{ defaultAddress || '广东江门' }}</text>
+        </view>
+        <view class="address-right" @tap="showComingSoon">
+          <text class="daily-icon">💙</text>
+          <text class="daily-text">今日活力满灌</text>
         </view>
       </view>
     </view>
@@ -58,7 +102,7 @@
       <view class="order-items">
         <view class="order-item" @tap="goToOrders('pending')">
           <view class="order-icon-wrap">
-            <text class="order-icon">💳</text>
+            <image class="order-icon-img" src="@/assets/order-pending.png" mode="aspectFit" />
             <view v-if="pendingCount > 0" class="order-badge">
               <text class="order-badge-text">{{ pendingCount }}</text>
             </view>
@@ -67,7 +111,7 @@
         </view>
         <view class="order-item" @tap="goToOrders('paid')">
           <view class="order-icon-wrap">
-            <text class="order-icon">📦</text>
+            <image class="order-icon-img" src="@/assets/order-shipped.png" mode="aspectFit" />
             <view v-if="shippedCount > 0" class="order-badge">
               <text class="order-badge-text">{{ shippedCount }}</text>
             </view>
@@ -76,7 +120,7 @@
         </view>
         <view class="order-item" @tap="goToOrders('shipped')">
           <view class="order-icon-wrap">
-            <text class="order-icon">🚚</text>
+            <image class="order-icon-img" src="@/assets/order-received.png" mode="aspectFit" />
             <view v-if="receivedCount > 0" class="order-badge">
               <text class="order-badge-text">{{ receivedCount }}</text>
             </view>
@@ -85,7 +129,7 @@
         </view>
         <view class="order-item" @tap="goToOrders('completed')">
           <view class="order-icon-wrap">
-            <text class="order-icon">⭐</text>
+            <image class="order-icon-img" src="@/assets/order-completed.png" mode="aspectFit" />
             <view v-if="reviewedCount > 0" class="order-badge">
               <text class="order-badge-text">{{ reviewedCount }}</text>
             </view>
@@ -98,35 +142,35 @@
     <view class="menu-section">
       <view class="menu-item" @tap="goToIceMachine">
         <view class="menu-left">
-          <text class="menu-icon">❄️</text>
+          <image class="menu-icon-img" src="@/assets/ice-machine.png" mode="aspectFit" />
           <text class="menu-text">制冰机</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
       <view class="menu-item" @tap="showComingSoon">
         <view class="menu-left">
-          <text class="menu-icon">🎫</text>
+          <image class="menu-icon-img" src="@/assets/coupon.png" mode="aspectFit" />
           <text class="menu-text">优惠券</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
       <view class="menu-item" @tap="goToAddresses">
         <view class="menu-left">
-          <text class="menu-icon">📍</text>
+          <image class="menu-icon-img" src="@/assets/address.png" mode="aspectFit" />
           <text class="menu-text">收货地址</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
       <view class="menu-item" @tap="showComingSoon">
         <view class="menu-left">
-          <text class="menu-icon">ℹ️</text>
+          <image class="menu-icon-img" src="@/assets/about.png" mode="aspectFit" />
           <text class="menu-text">关于我们</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @tap="handleLogout">
         <view class="menu-left">
-          <text class="menu-icon">↩</text>
+          <image class="menu-icon-img" src="@/assets/logout.png" mode="aspectFit" />
           <text class="menu-text menu-text--danger">退出登录</text>
         </view>
         <text class="menu-arrow menu-arrow--danger">›</text>
@@ -143,6 +187,7 @@ import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser } from '@/api/users'
 import { listOrders } from '@/api/orders'
+import { listUserAddresses } from '@/api/user-addresses'
 import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
 import './index.scss'
 
@@ -161,14 +206,33 @@ export default {
     // ---- 头像（本地存储，无需后端） ----
     const avatarUrl = ref(Taro.getStorageSync(STORAGE_AVATAR_KEY) || '')
 
-    const pendingPhoneAuth = ref(false)
-
-    function onChooseAvatar(e) {
-      const url = e.detail && e.detail.avatarUrl
-      if (!url) return
-      avatarUrl.value = url
-      Taro.setStorageSync(STORAGE_AVATAR_KEY, url)
+    function onChooseAvatar (e) {
+      const url = e.detail?.avatarUrl
+      if (url) {
+        avatarUrl.value = url
+        Taro.setStorageSync(STORAGE_AVATAR_KEY, url)
+      }
     }
+
+    // ---- 昵称（本地存储） ----
+    const STORAGE_NICKNAME_KEY = 'user_nickname'
+    const localNickname = ref(Taro.getStorageSync(STORAGE_NICKNAME_KEY) || '')
+    const isEditingNickname = ref(false)
+
+    function startEditNickname () {
+      isEditingNickname.value = true
+    }
+
+    function onNicknameChange (e) {
+      const name = e.detail?.value
+      if (name) {
+        localNickname.value = name
+        Taro.setStorageSync(STORAGE_NICKNAME_KEY, name)
+      }
+      isEditingNickname.value = false
+    }
+
+    const pendingPhoneAuth = ref(false)
 
     // ---- 手机号（从后端 GET /api/v1/users/me/ 读取） ----
     const {
@@ -234,15 +298,20 @@ export default {
     }
 
     function handlePhoneChange () {
-      Taro.showModal({
-        title: '修改手机号',
-        content: '确认将手机号修改为新授权的号码吗？',
-        success: (res) => {
-          if (res.confirm) {
-            pendingPhoneAuth.value = true
+      // 已有手机号：弹窗确认后授权；未绑定：直接进入授权
+      if (profilePhone.value) {
+        Taro.showModal({
+          title: '修改手机号',
+          content: '确认将手机号修改为新授权的号码吗？',
+          success: (res) => {
+            if (res.confirm) {
+              pendingPhoneAuth.value = true
+            }
           }
-        }
-      })
+        })
+      } else {
+        pendingPhoneAuth.value = true
+      }
     }
 
     // ---- 订单 ----
@@ -274,6 +343,36 @@ export default {
       return completed.length
     })
 
+    // 问候语
+    const greetingText = computed(() => {
+      const hour = new Date().getHours()
+      if (hour < 12) return '上午好'
+      if (hour < 18) return '下午好'
+      return '晚上好'
+    })
+
+    // 显示名称（优先本地昵称，其次 API profile.name）
+    const displayName = computed(() => {
+      return localNickname.value || userInfo.value?.profile?.name || ''
+    })
+
+    // 默认地址（从收货地址列表取第一条）
+    const defaultAddress = ref('')
+
+    async function fetchDefaultAddress () {
+      try {
+        const list = await listUserAddresses()
+        if (Array.isArray(list) && list.length > 0) {
+          const addr = list[0]
+          defaultAddress.value = [addr.province, addr.city, addr.district]
+            .filter(Boolean)
+            .join('') + (addr.detail || '')
+        }
+      } catch {
+        // 静默失败，保持占位文字
+      }
+    }
+
     // ---- 生命周期 ----
     useDidShow(() => {
       authStore.hydrate()
@@ -282,6 +381,7 @@ export default {
       // 如果已登录，刷新后端用户信息
       if (authStore.isAuthenticated) {
         refetchUser()
+        fetchDefaultAddress()
       }
     })
 
@@ -322,6 +422,9 @@ export default {
       isLoggedIn,
       avatarUrl,
       onChooseAvatar,
+      onNicknameChange,
+      isEditingNickname,
+      startEditNickname,
       profilePhone,
       maskPhone,
       onGetPhoneNumber,
@@ -331,6 +434,9 @@ export default {
       shippedCount,
       receivedCount,
       reviewedCount,
+      greetingText,
+      displayName,
+      defaultAddress,
       goToLogin,
       goToAddresses,
       goToOrders,
