@@ -105,6 +105,7 @@ import { createOrderPayment, createSaleOrder } from '@/api/orders'
 import { getSaleProductDetail } from '@/api/products'
 import { listUserAddresses } from '@/api/user-addresses'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
 
@@ -196,6 +197,7 @@ export default {
 
   setup() {
     const cartStore = useCartStore()
+    const authStore = useAuthStore()
     const selectedAddressId = ref(null)
     const remark = ref('')
     const isSubmitting = ref(false)
@@ -452,6 +454,21 @@ export default {
 
       if (validationMessage) {
         Taro.showToast({ title: validationMessage, icon: 'none' })
+        return
+      }
+
+      // 检查签约状态（从 authStore 读取缓存值，值已在启动时与后端核对）
+      if (!authStore.canDoBusiness) {
+        isSubmitting.value = false
+        Taro.showModal({
+          title: '签署合作协议',
+          content: '您需要先签署合作协议后才能下单，是否前往签署？',
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              Taro.navigateTo({ url: '/pages/user/index' })
+            }
+          }
+        })
         return
       }
 

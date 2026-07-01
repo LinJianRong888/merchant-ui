@@ -168,6 +168,13 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
+      <view v-if="isLoggedIn" class="menu-item menu-item--sign" @tap="handleSignTap">
+        <view class="menu-left">
+          <text class="sign-status-icon">{{ signingIcon }}</text>
+          <text class="menu-text" :class="{ 'menu-text--danger': !canDoBusiness }">{{ signingLabel }}</text>
+        </view>
+        <text class="menu-arrow" :class="{ 'menu-arrow--danger': !canDoBusiness }">›</text>
+      </view>
       <view v-if="isLoggedIn" class="menu-item" @tap="handleLogout">
         <view class="menu-left">
           <image class="menu-icon-img" src="@/assets/logout.png" mode="aspectFit" />
@@ -182,13 +189,14 @@
 
 <script>
 import Taro, { useDidShow } from '@tarojs/taro'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser } from '@/api/users'
 import { listOrders } from '@/api/orders'
 import { listUserAddresses } from '@/api/user-addresses'
 import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
+import { getSigningStatus } from '@/api/esign'
 import './index.scss'
 
 const ADDRESSES_PAGE = '/pages/user/addresses/index'
@@ -356,6 +364,53 @@ export default {
       return localNickname.value || userInfo.value?.profile?.name || ''
     })
 
+    // ---- 签约 ----
+    // can_do_business 统一从 authStore 读取（默认 false，启动时与后端核对）
+    const canDoBusiness = computed(() => authStore.canDoBusiness)
+
+    const userType = computed(() => userInfo.value?.user_type || 'customer')
+
+    // 签约详情（agent 和 customer 分别走对应接口）
+    const {
+      data: signingInfo
+    } = useAppQuery({
+      queryKey: ['esign', 'signing', 'status', userType],
+      queryFn: () => getSigningStatus(userType.value || 'customer'),
+      enabled: computed(() => authStore.isAuthenticated)
+    })
+
+    // signingInfo 加载后同步 can_do_business 到 authStore
+    watch(signingInfo, (info) => {
+      if (info && typeof info.can_do_business === 'boolean') {
+        authStore.canDoBusiness = info.can_do_business
+        Taro.setStorageSync('can_do_business', info.can_do_business)
+      }
+    }, { immediate: true })
+
+    const signingIcon = computed(() => {
+      if (canDoBusiness.value) return '✅'
+      if (signingInfo.value?.needs_resign) return '⚠️'
+      return '📝'
+    })
+
+    const signingLabel = computed(() => {
+      if (canDoBusiness.value) return '已签署合作协议'
+      if (signingInfo.value?.needs_resign) return '需重新签署合作协议'
+      if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return '签署进行中'
+      return '签署合作协议'
+    })
+
+    async function handleSignTap () {
+      // 已签署且可下单：提示无需操作
+      if (canDoBusiness.value) {
+        Taro.showToast({ title: '已完成签署，可正常下单', icon: 'none' })
+        return
+      }
+      // 跳转到签署表单页，收集姓名和手机号
+      const type = userType.value || 'customer'
+      Taro.navigateTo({ url: `/pages/user/signing-form/index?userType=${type}` })
+    }
+
     // 默认地址（从收货地址列表取第一条）
     const defaultAddress = ref('')
 
@@ -376,6 +431,8 @@ export default {
     // ---- 生命周期 ----
     useDidShow(() => {
       authStore.hydrate()
+      // 启动时与后端核对 can_do_business
+      authStore.syncCanDoBusiness()
       // 刷新本地头像
       avatarUrl.value = Taro.getStorageSync(STORAGE_AVATAR_KEY) || ''
       // 如果已登录，刷新后端用户信息
@@ -436,6 +493,10 @@ export default {
       reviewedCount,
       greetingText,
       displayName,
+      canDoBusiness,
+      signingIcon,
+      signingLabel,
+      handleSignTap,
       defaultAddress,
       goToLogin,
       goToAddresses,
