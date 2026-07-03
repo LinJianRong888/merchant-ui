@@ -465,7 +465,7 @@ export default {
           content: '您需要先签署合作协议后才能下单，是否前往签署？',
           success: (modalRes) => {
             if (modalRes.confirm) {
-              Taro.navigateTo({ url: '/pages/user/index' })
+              Taro.navigateTo({ url: '/pages/user/signing-form/index' })
             }
           }
         })
