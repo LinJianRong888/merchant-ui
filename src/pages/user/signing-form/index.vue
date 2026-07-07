@@ -1,20 +1,28 @@
 <template>
   <view class="esign-container">
     <!-- 加载中 -->
-    <view v-if="loading" class="esign-loading">
+    <view v-if="pageState === 'loading'" class="esign-loading">
       <text class="esign-loading-text">正在检查签署状态...</text>
     </view>
 
     <!-- 已完成签署（真正完成） -->
-    <view v-else-if="signed" class="esign-result">
+    <view v-if="pageState === 'signed'" class="esign-result">
       <view class="esign-icon-text success">✓</view>
       <text class="esign-title">合作协议已签署完成</text>
       <text class="esign-desc">您可以返回继续使用业务功能</text>
       <button class="esign-btn" @tap="goBack">返回</button>
     </view>
 
+    <!-- 客户已签署，等待平台方签署 -->
+    <view v-if="pageState === 'partialSigned'" class="esign-result">
+      <view class="esign-icon-text link">📝</view>
+      <text class="esign-title">您已完成签署</text>
+      <text class="esign-desc">等待平台方签署后，即可正常使用</text>
+      <button class="esign-btn" @tap="goBack">返回</button>
+    </view>
+
     <!-- 管理员要求重新签署 -->
-    <view v-else-if="needsResign" class="esign-result">
+    <view v-if="pageState === 'needsResign'" class="esign-result">
       <view class="esign-icon-text warning">⚠️</view>
       <text class="esign-title">管理员要求您重新签署合作协议</text>
       <text class="esign-desc">请重新填写信息并完成签署以恢复业务权限</text>
@@ -23,7 +31,7 @@
     </view>
 
     <!-- 填写实名信息表单 -->
-    <view v-else-if="showForm" class="esign-form-wrap">
+    <view v-if="pageState === 'form'" class="esign-form-wrap">
       <view class="form-header">
         <text class="form-title">实名信息确认</text>
         <text class="form-desc">为确保电子合同法律效力，请填写您的真实身份信息</text>
@@ -71,7 +79,7 @@
     </view>
 
     <!-- 已获取签署链接 -->
-    <view v-else-if="signUrl" class="esign-result">
+    <view v-if="pageState === 'signUrl'" class="esign-result">
       <view class="esign-icon-text link">🔗</view>
       <text class="esign-title">签署链接已生成</text>
       <text class="esign-desc">请在外部浏览器中打开以下链接完成签署：</text>
@@ -86,7 +94,7 @@
     </view>
 
     <!-- 错误状态 -->
-    <view v-else class="esign-result">
+    <view v-if="pageState === 'error'" class="esign-result">
       <view class="esign-icon-text error">✕</view>
       <text class="esign-title">{{ errorMsg || '获取签署链接失败' }}</text>
       <button class="esign-btn" @tap="retry">重试</button>
@@ -99,7 +107,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import Taro from '@tarojs/taro'
 import { startSigning, getSigningStatus, cancelSigning } from '@/api/esign'
 import { useAuthStore } from '@/stores/auth'
@@ -111,6 +119,7 @@ export default {
     const userType = ref('customer')
     const loading = ref(true)
     const signed = ref(false)
+    const partialSigned = ref(false)
     const needsResign = ref(false)
     const showForm = ref(false)
     const signUrl = ref('')
@@ -122,6 +131,17 @@ export default {
     const form = reactive({
       realName: '',
       phone: ''
+    })
+
+    const pageState = computed(() => {
+      if (loading.value) return 'loading'
+      if (signed.value) return 'signed'
+      if (partialSigned.value) return 'partialSigned'
+      if (needsResign.value) return 'needsResign'
+      if (showForm.value) return 'form'
+      if (signUrl.value) return 'signUrl'
+      if (errorMsg.value) return 'error'
+      return 'loading'
     })
 
     onMounted(() => {
@@ -141,6 +161,16 @@ export default {
           authStore.canDoBusiness = true
           Taro.setStorageSync('can_do_business', true)
           signed.value = true
+          loading.value = false
+          return
+        }
+
+        // 客户已签署，等待平台方签署（status_label === "部分已签"）
+        if (statusData?.status_label === '部分已签') {
+          Taro.showToast({ title: '您已完成签署，等待平台方签署', icon: 'none', duration: 2000 })
+          setTimeout(() => {
+            Taro.navigateBack()
+          }, 2000)
           loading.value = false
           return
         }
@@ -316,10 +346,17 @@ export default {
           signUrl.value = ''
           needsResign.value = false
           Taro.showToast({ title: '签署完成', icon: 'success' })
+        } else if (data?.status_label === '部分已签') {
+          Taro.showToast({ title: '您已完成签署，等待平台方签署', icon: 'none', duration: 2000 })
+          setTimeout(() => {
+            Taro.navigateBack()
+          }, 2000)
         } else if (data?.needs_resign) {
           needsResign.value = true
           signUrl.value = ''
           Taro.showToast({ title: '管理员要求重新签署', icon: 'none' })
+        } else if (data?.status_label === '待签署') {
+          Taro.showToast({ title: '请先完成签署', icon: 'none' })
         } else {
           Taro.showToast({ title: '尚未检测到签署完成', icon: 'none' })
         }
@@ -334,6 +371,7 @@ export default {
       errorMsg.value = ''
       signUrl.value = ''
       showForm.value = false
+      partialSigned.value = false
       needsResign.value = false
       hasInProgress.value = false
       initSign()
@@ -350,7 +388,9 @@ export default {
 
     return {
       loading,
+      pageState,
       signed,
+      partialSigned,
       needsResign,
       showForm,
       signUrl,
