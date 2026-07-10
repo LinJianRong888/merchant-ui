@@ -24,14 +24,12 @@
     </view>
 
     <view v-else-if="product" class="product-detail-shell">
-      <swiper class="product-swiper" :indicator-dots="true" :autoplay="false">
-        <swiper-item>
-          <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="aspectFill" />
-          <view v-else class="product-image product-image--empty">
-            <text class="product-image__text">{{ product.placeholderText }}</text>
-          </view>
-        </swiper-item>
-      </swiper>
+      <view class="product-image-wrap">
+        <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="widthFix" />
+        <view v-else class="product-image product-image--empty">
+          <text class="product-image__text">{{ product.placeholderText }}</text>
+        </view>
+      </view>
 
       <view class="product-info">
         <view class="product-price-row">
