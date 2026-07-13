@@ -46,12 +46,13 @@
   padding: 0 !important;
   margin: 0 !important;
   line-height: normal !important;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f0f0f0 !important;
   border: none !important;
-  box-sizing: content-box;
+  box-sizing: border-box;
   flex-shrink: 0;
 }
 
@@ -60,25 +61,18 @@
 }
 
 .avatar-image {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 112rpx;
   height: 112rpx;
   border-radius: 56rpx;
-  display: block;
-}
-
-.avatar-placeholder {
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: 56rpx;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .avatar-placeholder-text {
-  font-size: 44rpx;
+  font-size: 48rpx;
   line-height: 1;
+  color: #999;
 }
 
 .user-detail {
@@ -115,7 +109,7 @@
 }
 
 .user-name-input {
-  font-size: 44rpx;
+  font-size: 29rpx;
   font-weight: bold;
   color: #222;
   line-height: 1.2;
@@ -129,25 +123,32 @@
 }
 
 .user-name {
-  font-size: 44rpx;
+  flex: 1;
+  min-width: 0;
+  font-size: 29rpx;
   font-weight: bold;
   color: #222;
   line-height: 1.2;
   margin-right: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .name-edit-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40rpx;
-  height: 40rpx;
-  margin-right: 16rpx;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 12rpx;
   flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
 }
 
 .name-edit-icon {
-  font-size: 28rpx;
+  font-size: 26rpx;
   line-height: 1;
 }
 
@@ -159,6 +160,7 @@
   border-radius: 8rpx;
   background: #e8f0ff;
   height: 38rpx;
+  flex-shrink: 0;
 }
 
 .role-tag-text {

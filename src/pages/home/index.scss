@@ -6,6 +6,37 @@
   padding-bottom: 100rpx;
 }
 
+/* 公告栏 */
+.notice-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: $color-bg-white;
+  border-radius: 16rpx;
+  padding: 12rpx 24rpx;
+}
+
+.notice-bar__icon {
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.notice-bar__swiper {
+  flex: 1;
+  height: 40rpx;
+  background: #fef3c7;
+  border-radius: 8rpx;
+}
+
+.notice-bar__text {
+  display: flex;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 16rpx;
+  font-size: 24rpx;
+  color: #92400e;
+}
+
 .search-bar {
   position: sticky;
   top: 0;
@@ -57,6 +88,106 @@
   flex: 1;
   font-size: 28rpx;
   color: $color-text-primary;
+}
+
+/* 视频介绍 */
+/* 介绍卡片 */
+.intro-cards {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.intro-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: $color-bg-white;
+  border-radius: 16rpx;
+  padding: 20rpx 16rpx;
+}
+
+.intro-card__icon {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 6rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.intro-card__icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6rpx 0 6rpx 10rpx;
+  border-color: transparent transparent transparent #fff;
+}
+
+.intro-card__title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+/* 视频介绍展开 */
+.video-intro {
+  background: $color-bg-white;
+  margin-top: 16rpx;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.video-intro__desc {
+  display: block;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+  padding: 0 4rpx;
+}
+
+.video-intro__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200rpx;
+  background: $color-bg-light;
+  border-radius: 12rpx;
+  gap: 12rpx;
+}
+
+.video-intro__placeholder-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 28rpx;
+  background: rgba(102, 126, 234, 0.1);
+  position: relative;
+}
+
+.video-intro__placeholder-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 10rpx 0 10rpx 16rpx;
+  border-color: transparent transparent transparent #667eea;
+}
+
+.video-intro__placeholder-text {
+  font-size: 24rpx;
+  color: $color-text-muted;
 }
 
 .search-placeholder {

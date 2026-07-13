@@ -9,14 +9,11 @@
           @chooseavatar="onChooseAvatar"
         >
           <image
-            v-if="avatarUrl"
-            :src="avatarUrl"
             class="avatar-image"
+            :src="displayAvatar || ''"
             mode="aspectFill"
           />
-          <view v-else class="avatar-placeholder">
-            <text class="avatar-placeholder-text">👤</text>
-          </view>
+          <text v-if="!displayAvatar" class="avatar-placeholder-text">👤</text>
         </button>
         <view v-else class="user-avatar" @tap="goToLogin">
           <text class="avatar-placeholder-text">👤</text>
@@ -36,10 +33,11 @@
               <input
                 v-else
                 class="user-name-input"
-                type="nickname"
-                :value="displayName || '用户'"
-                :placeholder="'点击填写昵称'"
+                type="text"
+                :value="editName"
+                :placeholder="displayName || '用户'"
                 :focus="isEditingNickname"
+                @input="onEditNameInput"
                 @blur="onNicknameChange"
               />
               <view
@@ -164,7 +162,7 @@
       <view class="menu-item" @tap="showComingSoon">
         <view class="menu-left">
           <image class="menu-icon-img" src="@/assets/about.png" mode="aspectFit" />
-          <text class="menu-text">关于我们</text>
+          <text class="menu-text">联系客服</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
@@ -192,7 +190,7 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { ref, computed, watch } from 'vue'
 import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
-import { getCurrentUser } from '@/api/users'
+import { getCurrentUser, updateCurrentUser, uploadAvatar } from '@/api/users'
 import { listOrders } from '@/api/orders'
 import { listUserAddresses } from '@/api/user-addresses'
 import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
@@ -211,14 +209,31 @@ export default {
     const authStore = useAuthStore()
     const isLoggedIn = computed(() => authStore.isAuthenticated)
 
-    // ---- 头像（本地存储，无需后端） ----
+    // ---- 头像（优先后端 profile.avatar，其次本地缓存） ----
     const avatarUrl = ref(Taro.getStorageSync(STORAGE_AVATAR_KEY) || '')
 
-    function onChooseAvatar (e) {
+    async function onChooseAvatar (e) {
       const url = e.detail?.avatarUrl
-      if (url) {
+      if (!url) return
+
+      try {
+        Taro.showLoading({ title: '上传中...' })
+        const result = await uploadAvatar(url)
+        const remoteUrl = result?.avatar_url || result?.avatar || ''
+        if (remoteUrl) {
+          avatarUrl.value = remoteUrl
+          Taro.setStorageSync(STORAGE_AVATAR_KEY, remoteUrl)
+        }
+        await refetchUser()
+        Taro.showToast({ title: '头像已更新', icon: 'success' })
+      } catch (err) {
+        console.error('[user] upload avatar error:', err)
+        // 上传失败降级：使用本地临时路径
         avatarUrl.value = url
         Taro.setStorageSync(STORAGE_AVATAR_KEY, url)
+        Taro.showToast({ title: '头像保存到本地', icon: 'none' })
+      } finally {
+        Taro.hideLoading()
       }
     }
 
@@ -226,18 +241,45 @@ export default {
     const STORAGE_NICKNAME_KEY = 'user_nickname'
     const localNickname = ref(Taro.getStorageSync(STORAGE_NICKNAME_KEY) || '')
     const isEditingNickname = ref(false)
+    const editName = ref('')
 
     function startEditNickname () {
+      editName.value = ''
       isEditingNickname.value = true
     }
 
-    function onNicknameChange (e) {
-      const name = e.detail?.value
-      if (name) {
+    function onEditNameInput (e) {
+      editName.value = e.detail?.value || ''
+    }
+
+    async function onNicknameChange () {
+      const name = editName.value.trim()
+      if (!name) {
+        // 未输入：取消编辑，恢复原名
+        isEditingNickname.value = false
+        editName.value = ''
+        return
+      }
+
+      isEditingNickname.value = false
+      editName.value = ''
+
+      try {
+        Taro.showLoading({ title: '保存中...' })
+        const result = await updateCurrentUser({ profile: { name } })
+        console.log('[user] update name result:', result)
+        // 同步本地缓存 + 刷新后端数据
         localNickname.value = name
         Taro.setStorageSync(STORAGE_NICKNAME_KEY, name)
+        await refetchUser()
+        Taro.showToast({ title: '名称已更新', icon: 'success' })
+      } catch (e) {
+        console.error('[user] update name error:', e)
+        const msg = e?.message || e?.detail || '更新失败，请重试'
+        Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
+      } finally {
+        Taro.hideLoading()
       }
-      isEditingNickname.value = false
     }
 
     const pendingPhoneAuth = ref(false)
@@ -251,6 +293,11 @@ export default {
       queryFn: getCurrentUser,
       enabled: computed(() => authStore.isAuthenticated),
       retry: 0
+    })
+
+    // 后端数据加载后优先使用后端头像
+    const displayAvatar = computed(() => {
+      return userInfo.value?.profile?.avatar || avatarUrl.value
     })
 
     const profilePhone = computed(() => {
@@ -359,9 +406,12 @@ export default {
       return '晚上好'
     })
 
-    // 显示名称（优先本地昵称，其次 API profile.name）
+    // 显示名称（后端 profile.name → 本地缓存 → 后端 username → 默认）
     const displayName = computed(() => {
-      return localNickname.value || userInfo.value?.profile?.name || ''
+      return userInfo.value?.profile?.name
+        || localNickname.value
+        || userInfo.value?.username
+        || '用户'
     })
 
     // ---- 签约 ----
@@ -478,10 +528,13 @@ export default {
     return {
       isLoggedIn,
       avatarUrl,
+      displayAvatar,
       onChooseAvatar,
+      onEditNameInput,
       onNicknameChange,
       isEditingNickname,
       startEditNickname,
+      editName,
       profilePhone,
       maskPhone,
       onGetPhoneNumber,

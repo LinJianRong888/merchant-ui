@@ -15,6 +15,16 @@
       </view>
     </view>
 
+    <!-- 公告栏 -->
+    <view v-if="!searchQuery.trim()" class="notice-bar">
+      <view class="notice-bar__icon">📢</view>
+      <swiper class="notice-bar__swiper" :autoplay="true" :interval="3000" :circular="true" vertical>
+        <swiper-item v-for="(item, index) in notices" :key="index">
+          <text class="notice-bar__text">{{ item }}</text>
+        </swiper-item>
+      </swiper>
+    </view>
+
     <!-- 搜索结果列表 -->
     <view v-if="searchQuery.trim()" class="search-results">
       <view class="section-header">
@@ -55,6 +65,23 @@
     <view v-else class="banner-swiper banner-swiper--empty">
       <view class="banner-image banner-image--empty">
         <text class="banner-image__text">暂无轮播图片</text>
+      </view>
+    </view>
+
+    <!-- 介绍 -->
+    <view v-if="!searchQuery.trim()" class="intro-cards">
+      <view class="intro-card" @tap="toggleVideoIntro">
+        <view class="intro-card__icon"></view>
+        <text class="intro-card__title">视频介绍说明</text>
+      </view>
+    </view>
+
+    <!-- 视频介绍展开 -->
+    <view v-if="!searchQuery.trim() && videoExpanded" class="video-intro">
+      <text class="video-intro__desc">点击下方视频了解更多产品详情与使用教程</text>
+      <view class="video-intro__placeholder">
+        <view class="video-intro__placeholder-icon"></view>
+        <text class="video-intro__placeholder-text">视频内容即将上线</text>
       </view>
     </view>
 
@@ -134,6 +161,16 @@ export default {
     const authStore = useAuthStore()
     const searchQuery = ref('')
     const fallbackProducts = ref([])
+    const videoExpanded = ref(true)
+    const notices = [
+      '欢迎光临，新品上架中，敬请期待！',
+      '限时优惠活动火热进行中！',
+      '更多好物持续更新，敬请关注！'
+    ]
+
+    function toggleVideoIntro() {
+      videoExpanded.value = !videoExpanded.value
+    }
 
     const {
       data: products,
@@ -251,6 +288,9 @@ export default {
       searchResults,
       isLoading,
       searchQuery,
+      videoExpanded,
+      toggleVideoIntro,
+      notices,
       handleProductDetail,
       handleMoreProducts,
       handleSearchInput,
