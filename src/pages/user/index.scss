@@ -33,6 +33,13 @@
   flex-shrink: 0;
 }
 
+.user-avatar-circle {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 56rpx;
+  background: #f0f0f0;
+}
+
 /* 已登录时的头像选择按钮 */
 .avatar-btn {
   width: 112rpx !important;
@@ -93,6 +100,7 @@
 .greeting-icon {
   font-size: 26rpx;
   margin-right: 6rpx;
+  color: #f59e0b;
 }
 
 .greeting-text {
@@ -150,6 +158,7 @@
 .name-edit-icon {
   font-size: 26rpx;
   line-height: 1;
+  color: #666;
 }
 
 .role-tag {
@@ -177,7 +186,8 @@
 
 .phone-icon {
   font-size: 24rpx;
-  margin-right: 6rpx;
+  margin-right: 8rpx;
+  color: #888;
 }
 
 .user-phone {
@@ -233,7 +243,8 @@
 
 .address-icon {
   font-size: 24rpx;
-  margin-right: 6rpx;
+  margin-right: 8rpx;
+  color: #888;
 }
 
 .address-text {
@@ -241,22 +252,46 @@
   color: #555;
 }
 
-.address-right {
+.esign-banner {
   display: flex;
   align-items: center;
-  padding: 8rpx 20rpx;
-  border-radius: 30rpx;
-  background: #f7f9fc;
+  margin: 16rpx 24rpx;
+  padding: 20rpx 24rpx;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 16rpx;
+  border: 1rpx solid #fcd34d;
 }
 
-.daily-icon {
-  font-size: 24rpx;
-  margin-right: 6rpx;
+.esign-banner__icon {
+  font-size: 36rpx;
+  color: #d97706;
+  margin-right: 16rpx;
+  flex-shrink: 0;
 }
 
-.daily-text {
+.esign-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.esign-banner__title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #92400e;
+  display: block;
+}
+
+.esign-banner__desc {
   font-size: 24rpx;
-  color: #3b82f6;
+  color: #a16207;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.esign-banner__arrow {
+  font-size: 36rpx;
+  color: #b45309;
+  flex-shrink: 0;
 }
 
 .order-section {
@@ -384,12 +419,59 @@
   margin-right: 20rpx;
 }
 
-.sign-status-icon {
-  font-size: 36rpx;
-  margin-right: 20rpx;
+.kefu-icon {
+  position: relative;
   width: 36rpx;
-  display: inline-block;
-  text-align: center;
+  height: 36rpx;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 18rpx;
+    height: 24rpx;
+    border: 3rpx solid #666;
+    border-radius: 8rpx 8rpx 4rpx 4rpx;
+    top: 2rpx;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 10rpx;
+    height: 10rpx;
+    border: 3rpx solid #666;
+    border-radius: 0 0 50% 50%;
+    border-top: none;
+    bottom: 4rpx;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.sign-status-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.dot--green {
+  background: #16a34a;
+}
+
+.dot--red {
+  background: #dc2626;
+}
+
+.dot--yellow {
+  background: #d97706;
+}
+
+.dot--gray {
+  background: #9ca3af;
 }
 
 .menu-text {
@@ -408,4 +490,110 @@
 
 .menu-arrow--danger {
   color: #e38a8a;
+}
+
+/* ---- 邀请码图标 ---- */
+.invite-icon {
+  position: relative;
+  width: 36rpx;
+  height: 36rpx;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 22rpx;
+    height: 22rpx;
+    border: 3rpx solid #666;
+    border-radius: 4rpx;
+    top: 7rpx;
+    left: 7rpx;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 6rpx;
+    height: 10rpx;
+    border: 3rpx solid #666;
+    border-radius: 0 50% 50% 0;
+    border-left: none;
+    top: 12rpx;
+    left: 8rpx;
+  }
+}
+
+/* ---- 邀请码弹窗 ---- */
+.invite-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.invite-modal-card {
+  width: 560rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 48rpx 40rpx 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.invite-modal-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 36rpx;
+}
+
+.invite-modal-input {
+  width: 100%;
+  height: 80rpx;
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.invite-modal-btns {
+  display: flex;
+  width: 100%;
+  margin-top: 40rpx;
+  gap: 24rpx;
+}
+
+.invite-modal-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  line-height: 80rpx;
+  padding: 0;
+
+  &.cancel {
+    background: #f0f0f0;
+    color: #666;
+  }
+
+  &.confirm {
+    background: #e84c2d;
+    color: #fff;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
 }

@@ -13,16 +13,16 @@
             :src="displayAvatar || ''"
             mode="aspectFill"
           />
-          <text v-if="!displayAvatar" class="avatar-placeholder-text">👤</text>
+          <text v-if="!displayAvatar" class="avatar-placeholder-text"></text>
         </button>
         <view v-else class="user-avatar" @tap="goToLogin">
-          <text class="avatar-placeholder-text">👤</text>
+          <view class="user-avatar-circle"></view>
         </view>
 
         <view class="user-detail">
           <!-- 问候行 -->
           <view class="greeting-row">
-            <text class="greeting-icon">☀️</text>
+            <text class="greeting-icon">&#9728;</text>
             <text class="greeting-text">{{ greetingText }}</text>
           </view>
 
@@ -38,14 +38,15 @@
                 :placeholder="displayName || '用户'"
                 :focus="isEditingNickname"
                 @input="onEditNameInput"
-                @blur="onNicknameChange"
+                @confirm="onNicknameChange"
+                @blur="onNicknameBlur"
               />
               <view
                 class="name-edit-btn"
                 @tap="startEditNickname"
                 v-if="!isEditingNickname"
               >
-                <text class="name-edit-icon">✏️</text>
+                <text class="name-edit-icon">&#9998;</text>
               </view>
               <view class="role-tag">
                 <text class="role-tag-text">会员</text>
@@ -56,20 +57,9 @@
           <!-- 手机号行 -->
           <template v-if="isLoggedIn">
             <view class="phone-row">
-              <text class="phone-icon">📱</text>
+              <text class="phone-icon">&#9743;</text>
               <text class="user-phone" v-if="profilePhone">{{ maskPhone(profilePhone) }}</text>
               <text class="user-phone" v-else>未绑定</text>
-              <button
-                v-if="!pendingPhoneAuth"
-                class="change-btn"
-                @tap="handlePhoneChange"
-              >更换</button>
-              <button
-                v-else
-                class="change-btn"
-                open-type="getPhoneNumber"
-                @getphonenumber="onGetPhoneNumber"
-              >点击授权</button>
             </view>
           </template>
           <text v-else class="login-hint" @tap="goToLogin">点击登录</text>
@@ -79,12 +69,8 @@
       <!-- 底部地址栏 -->
       <view class="address-bar">
         <view class="address-left">
-          <text class="address-icon">📍</text>
-          <text class="address-text">{{ defaultAddress || '广东江门' }}</text>
-        </view>
-        <view class="address-right" @tap="showComingSoon">
-          <text class="daily-icon">💙</text>
-          <text class="daily-text">今日活力满灌</text>
+          <text class="address-icon">&#9678;</text>
+          <text class="address-text">{{ defaultAddress }}</text>
         </view>
       </view>
     </view>
@@ -145,13 +131,6 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-      <view class="menu-item" @tap="showComingSoon">
-        <view class="menu-left">
-          <image class="menu-icon-img" src="@/assets/coupon.png" mode="aspectFit" />
-          <text class="menu-text">优惠券</text>
-        </view>
-        <text class="menu-arrow">›</text>
-      </view>
       <view class="menu-item" @tap="goToAddresses">
         <view class="menu-left">
           <image class="menu-icon-img" src="@/assets/address.png" mode="aspectFit" />
@@ -159,16 +138,23 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-      <view class="menu-item" @tap="showComingSoon">
+      <view class="menu-item" @tap="goToCustomerService">
         <view class="menu-left">
-          <image class="menu-icon-img" src="@/assets/about.png" mode="aspectFit" />
+          <view class="menu-icon kefu-icon"></view>
           <text class="menu-text">联系客服</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @tap="showInviteModal = true">
+        <view class="menu-left">
+          <view class="menu-icon invite-icon"></view>
+          <text class="menu-text">填写邀请码</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item menu-item--sign" @tap="handleSignTap">
         <view class="menu-left">
-          <text class="sign-status-icon">{{ signingIcon }}</text>
+          <view class="sign-status-dot" :class="signStatusClass"></view>
           <text class="menu-text" :class="{ 'menu-text--danger': !canDoBusiness }">{{ signingLabel }}</text>
         </view>
         <text class="menu-arrow" :class="{ 'menu-arrow--danger': !canDoBusiness }">›</text>
@@ -179,6 +165,27 @@
           <text class="menu-text menu-text--danger">退出登录</text>
         </view>
         <text class="menu-arrow menu-arrow--danger">›</text>
+      </view>
+    </view>
+
+    <!-- 填写邀请码弹窗 -->
+    <view v-if="showInviteModal" class="invite-modal-mask" @tap="showInviteModal = false">
+      <view class="invite-modal-card" @tap.stop>
+        <text class="invite-modal-title">填写邀请码</text>
+        <input
+          class="invite-modal-input"
+          :value="inviteCodeInput"
+          placeholder="请输入邀请码"
+          placeholder-style="color:#c0c6cc;"
+          maxlength="30"
+          @input="onInviteCodeInput"
+        />
+        <view class="invite-modal-btns">
+          <button class="invite-modal-btn cancel" @tap="showInviteModal = false">取消</button>
+          <button class="invite-modal-btn confirm" :disabled="inviteSubmitting" @tap="handleBindInviteCode">
+            {{ inviteSubmitting ? '提交中...' : '确认' }}
+          </button>
+        </view>
       </view>
     </view>
 
@@ -193,14 +200,15 @@ import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser, updateCurrentUser, uploadAvatar } from '@/api/users'
 import { listOrders } from '@/api/orders'
 import { listUserAddresses } from '@/api/user-addresses'
-import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
 import { getSigningStatus } from '@/api/esign'
+import { bindInviteCode } from '@/api/invitation'
 import './index.scss'
 
 const ADDRESSES_PAGE = '/pages/user/addresses/index'
 const ORDERS_PAGE = '/pages/orders/index'
 const LOGIN_PAGE = '/pages/index/index'
 const ICE_MACHINE_PAGE = '/pages/user/ice-machine/index'
+const CUSTOMER_SERVICE_PAGE = '/pages/user/customer-service/index'
 
 const STORAGE_AVATAR_KEY = 'user_avatar_url'
 
@@ -252,8 +260,21 @@ export default {
       editName.value = e.detail?.value || ''
     }
 
-    async function onNicknameChange () {
-      const name = editName.value.trim()
+    function onNicknameBlur (e) {
+      // 延迟判断：如果 confirm 已经处理了，这里不再重复
+      const name = (e?.detail?.value || editName.value || '').trim()
+      if (!name) {
+        isEditingNickname.value = false
+        editName.value = ''
+      }
+      // 如果有值但还没提交（用户点了其他地方），走 confirm 逻辑
+      if (name) {
+        onNicknameChange(e)
+      }
+    }
+
+    async function onNicknameChange (e) {
+      const name = (e?.detail?.value || editName.value).trim()
       if (!name) {
         // 未输入：取消编辑，恢复原名
         isEditingNickname.value = false
@@ -282,8 +303,6 @@ export default {
       }
     }
 
-    const pendingPhoneAuth = ref(false)
-
     // ---- 手机号（从后端 GET /api/v1/users/me/ 读取） ----
     const {
       data: userInfo,
@@ -301,72 +320,14 @@ export default {
     })
 
     const profilePhone = computed(() => {
-      const apiPhone = userInfo.value?.profile?.phone || ''
       const storePhone = authStore.purePhoneNumber || authStore.phoneNumber || ''
-      return apiPhone || storePhone
+      const apiPhone = userInfo.value?.profile?.phone || ''
+      return storePhone || apiPhone
     })
 
     function maskPhone(phone) {
       if (!phone || phone.length < 11) return phone
       return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-    }
-
-    async function onGetPhoneNumber(e) {
-      const detail = e.detail || {}
-      if (detail.errMsg && !detail.errMsg.includes('ok')) {
-        pendingPhoneAuth.value = false
-        Taro.showToast({ title: '取消授权', icon: 'none' })
-        return
-      }
-      const code = detail.code
-      if (!code) {
-        pendingPhoneAuth.value = false
-        Taro.showToast({ title: '获取手机号失败', icon: 'none' })
-        return
-      }
-      try {
-        const response = await fetchWechatPhoneNumber({
-          code,
-          updateProfilePhone: true
-        })
-        const data = response.data || response
-
-        authStore.setPhoneNumber({
-          phone_number: data.phone_number || '',
-          pure_phone_number: data.pure_phone_number || '',
-          country_code: data.country_code || ''
-        })
-
-        await refetchUser()
-
-        pendingPhoneAuth.value = false
-        Taro.showToast({ title: profilePhone.value ? '手机号已修改' : '手机号已绑定', icon: 'success' })
-      } catch (err) {
-        pendingPhoneAuth.value = false
-        const errMsg = (err && (err.message || err.errMsg || '')) || ''
-        if (errMsg.includes('phone') || errMsg.includes('mobile') || errMsg.includes('手机号')) {
-          Taro.showToast({ title: '暂不支持此手机号', icon: 'none' })
-        } else {
-          Taro.showToast({ title: '获取手机号失败', icon: 'none' })
-        }
-      }
-    }
-
-    function handlePhoneChange () {
-      // 已有手机号：弹窗确认后授权；未绑定：直接进入授权
-      if (profilePhone.value) {
-        Taro.showModal({
-          title: '修改手机号',
-          content: '确认将手机号修改为新授权的号码吗？',
-          success: (res) => {
-            if (res.confirm) {
-              pendingPhoneAuth.value = true
-            }
-          }
-        })
-      } else {
-        pendingPhoneAuth.value = true
-      }
     }
 
     // ---- 订单 ----
@@ -422,38 +383,46 @@ export default {
 
     // 签约详情（agent 和 customer 分别走对应接口）
     const {
-      data: signingInfo
+      data: signingInfo,
+      refetch: refetchSigningStatus
     } = useAppQuery({
       queryKey: ['esign', 'signing', 'status', userType],
       queryFn: () => getSigningStatus(userType.value || 'customer'),
       enabled: computed(() => authStore.isAuthenticated)
     })
 
-    // signingInfo 加载后同步 can_do_business 到 authStore
+    // signingInfo 加载后同步到 authStore（不持久化，始终以后端为准）
     watch(signingInfo, (info) => {
       if (info && typeof info.can_do_business === 'boolean') {
         authStore.canDoBusiness = info.can_do_business
-        Taro.setStorageSync('can_do_business', info.can_do_business)
+        authStore.esignCooperationSigned = !!info.esign_cooperation_signed
       }
     }, { immediate: true })
 
-    const signingIcon = computed(() => {
-      if (canDoBusiness.value) return '✅'
-      if (signingInfo.value?.needs_resign) return '⚠️'
-      return '📝'
+    // 是否已签署完成（不论 can_do_business）
+    const hasSigned = computed(() => {
+      const info = signingInfo.value
+      return !!(info?.esign_cooperation_signed || info?.status === 'completed')
+    })
+
+    const signStatusClass = computed(() => {
+      if (canDoBusiness.value || hasSigned.value) return 'dot--green'
+      if (signingInfo.value?.needs_resign) return 'dot--red'
+      if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return 'dot--yellow'
+      return 'dot--gray'
     })
 
     const signingLabel = computed(() => {
-      if (canDoBusiness.value) return '已签署合作协议'
-      if (signingInfo.value?.needs_resign) return '需重新签署合作协议'
+      if (canDoBusiness.value || hasSigned.value) return '合作协议已签署'
+      if (signingInfo.value?.needs_resign) return '需重新签署协议'
       if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return '签署进行中'
       return '签署合作协议'
     })
 
     async function handleSignTap () {
-      // 已签署且可下单：提示无需操作
-      if (canDoBusiness.value) {
-        Taro.showToast({ title: '已完成签署，可正常下单', icon: 'none' })
+      // 已签署：提示无需操作
+      if (canDoBusiness.value || hasSigned.value) {
+        Taro.showToast({ title: '已完成签署', icon: 'none' })
         return
       }
       // 跳转到签署表单页，收集姓名和手机号
@@ -461,17 +430,26 @@ export default {
       Taro.navigateTo({ url: `/pages/user/signing-form/index?userType=${type}` })
     }
 
-    // 默认地址（从收货地址列表取第一条）
+    // 地址：优先后端 profile.address，其次取收货地址
     const defaultAddress = ref('')
+
+    function updateDisplayAddress () {
+      const profileAddr = userInfo.value?.profile?.address
+      if (profileAddr) {
+        defaultAddress.value = profileAddr
+        return
+      }
+      void fetchDefaultAddress()
+    }
 
     async function fetchDefaultAddress () {
       try {
         const list = await listUserAddresses()
         if (Array.isArray(list) && list.length > 0) {
-          const addr = list[0]
+          const addr = list.find(a => a.is_default) || list[0]
           defaultAddress.value = [addr.province, addr.city, addr.district]
             .filter(Boolean)
-            .join('') + (addr.detail || '')
+            .join('')
         }
       } catch {
         // 静默失败，保持占位文字
@@ -485,12 +463,53 @@ export default {
       authStore.syncCanDoBusiness()
       // 刷新本地头像
       avatarUrl.value = Taro.getStorageSync(STORAGE_AVATAR_KEY) || ''
-      // 如果已登录，刷新后端用户信息
+      // 如果已登录，刷新后端用户信息和签署状态
       if (authStore.isAuthenticated) {
         refetchUser()
-        fetchDefaultAddress()
+        updateDisplayAddress()
+        void refetchSigningStatus()
       }
     })
+
+    // ---- 邀请码 ----
+    const showInviteModal = ref(false)
+    const inviteCodeInput = ref('')
+    const inviteSubmitting = ref(false)
+
+    function onInviteCodeInput (e) {
+      inviteCodeInput.value = e.detail?.value || ''
+    }
+
+    async function handleBindInviteCode () {
+      const code = inviteCodeInput.value.trim()
+      if (!code) {
+        Taro.showToast({ title: '请输入邀请码', icon: 'none' })
+        return
+      }
+
+      inviteSubmitting.value = true
+      try {
+        const res = await bindInviteCode(code)
+        console.log('[user] bindInviteCode response:', res)
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          Taro.showToast({ title: '邀请码绑定成功', icon: 'success' })
+          showInviteModal.value = false
+          inviteCodeInput.value = ''
+          // 刷新签署状态（邀请码可能影响 can_do_business）
+          authStore.syncCanDoBusiness()
+          void refetchSigningStatus()
+        } else {
+          const msg = res.data?.detail || '邀请码无效'
+          Taro.showToast({ title: msg, icon: 'none' })
+        }
+      } catch (err) {
+        console.error('[user] bindInviteCode error:', err)
+        const msg = err?.message || err?.data?.detail || '绑定失败，请重试'
+        Taro.showToast({ title: msg, icon: 'none' })
+      } finally {
+        inviteSubmitting.value = false
+      }
+    }
 
     // ---- 导航 ----
     function goToLogin() {
@@ -521,8 +540,8 @@ export default {
       Taro.navigateTo({ url: ICE_MACHINE_PAGE })
     }
 
-    function showComingSoon() {
-      Taro.showToast({ title: '功能开发中，敬请期待', icon: 'none' })
+    function goToCustomerService() {
+      Taro.navigateTo({ url: CUSTOMER_SERVICE_PAGE })
     }
 
     return {
@@ -531,15 +550,13 @@ export default {
       displayAvatar,
       onChooseAvatar,
       onEditNameInput,
+      onNicknameBlur,
       onNicknameChange,
       isEditingNickname,
       startEditNickname,
       editName,
       profilePhone,
       maskPhone,
-      onGetPhoneNumber,
-      handlePhoneChange,
-      pendingPhoneAuth,
       pendingCount,
       shippedCount,
       receivedCount,
@@ -547,7 +564,7 @@ export default {
       greetingText,
       displayName,
       canDoBusiness,
-      signingIcon,
+      signStatusClass,
       signingLabel,
       handleSignTap,
       defaultAddress,
@@ -555,8 +572,13 @@ export default {
       goToAddresses,
       goToOrders,
       goToIceMachine,
+      goToCustomerService,
       handleLogout,
-      showComingSoon
+      showInviteModal,
+      inviteCodeInput,
+      inviteSubmitting,
+      onInviteCodeInput,
+      handleBindInviteCode
     }
   }
 }

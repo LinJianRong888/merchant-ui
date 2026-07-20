@@ -25,11 +25,8 @@
           <text class="address-detail">{{ formatFullAddress(selectedAddress) }}</text>
         </view>
         <view v-else class="address-placeholder">
-          <text class="placeholder-text">请添加地址</text>
-          <view class="import-btn">
-            <text class="import-icon">📱</text>
-            <text class="import-text">一键导入</text>
-          </view>
+          <text class="placeholder-text">请选择收货地址</text>
+          <text class="placeholder-action">选择</text>
         </view>
         <text class="arrow-icon">›</text>
       </view>
@@ -38,7 +35,6 @@
         <text class="shipping-label">发货方式</text>
         <view class="shipping-value">
           <text class="shipping-text">快递</text>
-          <text class="arrow-icon">›</text>
         </view>
       </view>
 
@@ -109,7 +105,7 @@ import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
 
-const ADDRESS_EDIT_PAGE_PATH = '/pages/user/addresses/edit/index'
+const ADDRESS_LIST_PAGE_PATH = '/pages/user/addresses/index'
 const ORDERS_LIST_PAGE_PATH = '/pages/orders/index'
 
 function formatFullAddress (address) {
@@ -212,7 +208,8 @@ export default {
 
     const {
       data: addresses,
-      isLoading: addressesLoading
+      isLoading: addressesLoading,
+      refetch: refetchAddresses
     } = useAppQuery({
       queryKey: ['user-addresses', 'select'],
       queryFn: async () => {
@@ -410,7 +407,7 @@ export default {
 
     function handleSelectAddress () {
       Taro.navigateTo({
-        url: ADDRESS_EDIT_PAGE_PATH
+        url: `${ADDRESS_LIST_PAGE_PATH}?select=true`
       })
     }
 
@@ -457,8 +454,8 @@ export default {
         return
       }
 
-      // 检查签约状态（从 authStore 读取缓存值，值已在启动时与后端核对）
-      if (!authStore.canDoBusiness) {
+      // 检查签署状态（从 authStore 读取，值已在启动时与后端核对）
+      if (!authStore.esignCooperationSigned) {
         isSubmitting.value = false
         Taro.showModal({
           title: '签署合作协议',
@@ -469,6 +466,12 @@ export default {
             }
           }
         })
+        return
+      }
+
+      if (!authStore.canDoBusiness) {
+        isSubmitting.value = false
+        Taro.showToast({ title: '需要等待验证后再下单', icon: 'none', duration: 3000 })
         return
       }
 
@@ -511,6 +514,17 @@ export default {
 
     useDidShow(async () => {
       pageReady.value = false
+
+      // 刷新地址列表和签署状态
+      await refetchAddresses()
+      authStore.syncCanDoBusiness()
+
+      // 读取从地址选择页带回的选中地址ID
+      const selectedId = Taro.getStorageSync('selected_address_id')
+      if (selectedId) {
+        selectedAddressId.value = selectedId
+        Taro.removeStorageSync('selected_address_id')
+      }
 
       const params = getCurrentInstance()?.router?.params || {}
 

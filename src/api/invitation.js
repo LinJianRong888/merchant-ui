@@ -38,3 +38,16 @@ export function merchantInvitationLogin ({ code, inviteCode, appSlug = 'merchant
     skipAuth: true
   })
 }
+
+/**
+ * POST /api/v1/invitations/merchant-miniapp/bind/
+ *
+ * 已登录的 customer 绑定邀请码，关联到 agent。
+ *
+ * @param {string} inviteCode - agent 邀请码
+ */
+export function bindInviteCode (inviteCode) {
+  return request.post('/api/v1/invitations/merchant-miniapp/bind/', {
+    invite_code: inviteCode
+  })
+}

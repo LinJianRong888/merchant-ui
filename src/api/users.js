@@ -27,7 +27,7 @@ export async function getCurrentUser () {
 }
 
 /**
- * PATCH /api/v1/users/me/
+ * PUT /api/v1/users/me/
  *
  * 更新当前登录用户的 profile 信息（如 name）。
  *
@@ -35,7 +35,7 @@ export async function getCurrentUser () {
  * @returns {Promise<Object>}
  */
 export async function updateCurrentUser (profileData) {
-  const response = await request.patch('/api/v1/users/me/', profileData)
+  const response = await request.put('/api/v1/users/me/', profileData)
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
     return response.data

@@ -17,8 +17,25 @@
 }
 
 .notice-bar__icon {
-  font-size: 28rpx;
+  width: 28rpx;
+  height: 28rpx;
   flex-shrink: 0;
+  border: 3rpx solid #f59e0b;
+  border-radius: 4rpx;
+  position: relative;
+}
+
+.notice-bar__icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-20deg);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 8rpx 0 8rpx 12rpx;
+  border-color: transparent transparent transparent #f59e0b;
 }
 
 .notice-bar__swiper {

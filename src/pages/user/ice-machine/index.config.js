@@ -1,3 +1,3 @@
 export default {
-  navigationBarTitleText: '申请制冰机'
+  navigationBarTitleText: '制冰机'
 }

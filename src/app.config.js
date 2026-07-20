@@ -14,6 +14,7 @@ export default defineAppConfig({
     'pages/user/signing/index',
     'pages/user/signing-form/index',
     'pages/user/ice-machine/index',
+    'pages/user/customer-service/index',
     'pages/index/index',
     'pages/invite-entry/index'
   ],

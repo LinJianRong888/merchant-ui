@@ -16,13 +16,14 @@
         <text class="agreement-user__name">{{ displayName || '用户' }}</text>
       </view>
       <text class="agreement-header__title">用户服务协议</text>
+      
       <text class="agreement-header__subtitle">柑之怡小程序</text>
     </view>
 
     <view class="agreement-body">
       <view class="agreement-card">
         <text class="agreement-card__text">欢迎使用柑之怡小程序。</text>
-        <text class="agreement-card__text">本协议是您与柑之怡之间关于使用本小程序服务所订立的协议。请您仔细阅读本协议，您点击"同意"即视为您已阅读并同意接受本协议的约束。</text>
+        <text class="agreement-card__text">本协议是您与柑之怡之间关于使用本小程序服务所订立的协议。请您仔细阅读本协议，您点击同意即视为您已阅读并同意接受本协议的约束。</text>
       </view>
 
       <view class="agreement-card">
@@ -78,7 +79,6 @@
       <view class="agreement-card agreement-card--contact">
         <text class="agreement-card__title">联系我们</text>
         <text class="agreement-card__text">如您对本协议有任何疑问或建议，请通过以下方式联系我们：</text>
-        <text class="agreement-card__text agreement-card__text--highlight">客服热线：400-XXX-XXXX</text>
         <text class="agreement-card__text agreement-card__text--highlight">在线客服：柑之怡小程序 - 我的 - 联系客服</text>
       </view>
     </view>
@@ -122,6 +122,6 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
   @import './index.scss';
 </style>

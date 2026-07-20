@@ -32,7 +32,8 @@
     "dev:harmony-hybrid": "npm run build:harmony-hybrid -- --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "copy:assets": "node -e \"require('fs').cpSync('src/assets/kefu-qr.png','dist/assets/kefu-qr.png',{force:true})\""
   },
   "browserslist": [
     "defaults and fully supports es6-module",

@@ -90,27 +90,16 @@
 }
 
 .placeholder-text {
-	font-size: 28rpx;
-	color: #999;
+  font-size: 28rpx;
+  color: #999;
 }
 
-.import-btn {
-	display: flex;
-	align-items: center;
-	gap: 8rpx;
-	padding: 10rpx 24rpx;
-	background: $color-success;
-	border-radius: 30rpx;
-}
-
-.import-icon {
-	font-size: 22rpx;
-}
-
-.import-text {
-	font-size: 24rpx;
-	color: $color-text-on-primary;
-	font-weight: 500;
+.placeholder-action {
+  font-size: 26rpx;
+  color: #2563eb;
+  padding: 8rpx 20rpx;
+  border: 1rpx solid #2563eb;
+  border-radius: 30rpx;
 }
 
 .arrow-icon {

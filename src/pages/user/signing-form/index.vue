@@ -7,7 +7,7 @@
 
     <!-- 已完成签署（真正完成） -->
     <view v-if="pageState === 'signed'" class="esign-result">
-      <view class="esign-icon-text success">✓</view>
+      <view class="esign-icon-text success"></view>
       <text class="esign-title">合作协议已签署完成</text>
       <text class="esign-desc">您可以返回继续使用业务功能</text>
       <button class="esign-btn" @tap="goBack">返回</button>
@@ -15,7 +15,7 @@
 
     <!-- 客户已签署，等待平台方签署 -->
     <view v-if="pageState === 'partialSigned'" class="esign-result">
-      <view class="esign-icon-text link">📝</view>
+      <view class="esign-icon-text link"></view>
       <text class="esign-title">您已完成签署</text>
       <text class="esign-desc">等待平台方签署后，即可正常使用</text>
       <button class="esign-btn" @tap="goBack">返回</button>
@@ -23,7 +23,7 @@
 
     <!-- 管理员要求重新签署 -->
     <view v-if="pageState === 'needsResign'" class="esign-result">
-      <view class="esign-icon-text warning">⚠️</view>
+      <view class="esign-icon-text warning"></view>
       <text class="esign-title">管理员要求您重新签署合作协议</text>
       <text class="esign-desc">请重新填写信息并完成签署以恢复业务权限</text>
       <button class="esign-btn primary" @tap="handleResign">重新签署</button>
@@ -38,7 +38,7 @@
       </view>
 
       <view class="form-warning">
-        <text class="warning-icon">⚠️</text>
+        <text class="warning-icon"></text>
         <text class="warning-text">签约后身份信息将不可修改，请仔细核对后再提交</text>
       </view>
 
@@ -55,14 +55,16 @@
         </view>
         <view class="form-item">
           <text class="form-label">手机号码</text>
-          <input
-            v-model="form.phone"
-            class="form-input"
-            type="digit"
-            placeholder="请输入手机号码"
-            placeholder-style="color:#c0c6cc;"
-            maxlength="11"
-          />
+          <text
+            v-if="form.phone"
+            class="form-phone-value"
+          >{{ form.phone }}</text>
+          <button
+            v-else
+            class="form-phone-btn"
+            open-type="getPhoneNumber"
+            @getphonenumber="onGetPhoneNumber"
+          >获取微信手机号</button>
         </view>
       </view>
 
@@ -80,7 +82,7 @@
 
     <!-- 已获取签署链接 -->
     <view v-if="pageState === 'signUrl'" class="esign-result">
-      <view class="esign-icon-text link">🔗</view>
+      <view class="esign-icon-text link--url"></view>
       <text class="esign-title">签署链接已生成</text>
       <text class="esign-desc">请在外部浏览器中打开以下链接完成签署：</text>
       <view class="esign-url-box">
@@ -95,7 +97,7 @@
 
     <!-- 错误状态 -->
     <view v-if="pageState === 'error'" class="esign-result">
-      <view class="esign-icon-text error">✕</view>
+      <view class="esign-icon-text error"></view>
       <text class="esign-title">{{ errorMsg || '获取签署链接失败' }}</text>
       <button class="esign-btn" @tap="retry">重试</button>
       <button v-if="hasInProgress" class="esign-btn cancel" :disabled="cancelling" @tap="cancelAndRefill">
@@ -110,6 +112,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import Taro from '@tarojs/taro'
 import { startSigning, getSigningStatus, cancelSigning } from '@/api/esign'
+import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
 import { useAuthStore } from '@/stores/auth'
 
 export default {
@@ -159,7 +162,6 @@ export default {
         // 真正合格：can_do_business 为 true
         if (statusData?.can_do_business) {
           authStore.canDoBusiness = true
-          Taro.setStorageSync('can_do_business', true)
           signed.value = true
           loading.value = false
           return
@@ -182,18 +184,40 @@ export default {
           return
         }
 
+        // 签署已完成（不论 can_do_business），直接展示已完成页
+        if (statusData?.esign_cooperation_signed || statusData?.status === 'completed') {
+          signed.value = true
+          loading.value = false
+          return
+        }
+
         // 有进行中的签署流程，直接获取url
         if (statusData?.has_signed && statusData?.status !== 'rejected' && statusData?.status !== 'expired' && statusData?.status !== 'failed') {
           hasInProgress.value = true
           const startRes = await startSigning(userType.value)
           console.log('[signing-form] initSign startSigning response:', startRes)
           if (startRes?.sign_url) {
+            if (startRes?.detail && (startRes.detail.includes('已完成') || startRes.detail.includes('无需重复'))) {
+              authStore.canDoBusiness = true
+              signed.value = true
+              signUrl.value = ''
+              hasInProgress.value = false
+              return
+            }
             signUrl.value = startRes.sign_url
             copyToClipboard(startRes.sign_url)
             loading.value = false
             return
           }
-          // 获取url失败 — 显示错误页（含取消按钮）
+          // 获取url失败
+          if (startRes?.detail && (startRes.detail.includes('已完成') || startRes.detail.includes('无需重复'))) {
+            authStore.canDoBusiness = true
+            signed.value = true
+            hasInProgress.value = false
+            loading.value = false
+            return
+          }
+          // 显示错误页（含取消按钮）
           errorMsg.value = startRes?.detail || startRes?.message || '获取签署链接失败'
           if (errorMsg.value) {
             Taro.showToast({ title: errorMsg.value, icon: 'none' })
@@ -222,17 +246,45 @@ export default {
         return false
       }
 
-      if (!String(form.phone || '').trim()) {
-        Taro.showToast({ title: '请输入手机号码', icon: 'none' })
-        return false
-      }
-      const phone = String(form.phone || '').trim()
-      if (!/^1[3-9]\d{9}$/.test(phone)) {
-        Taro.showToast({ title: '请输入正确的11位手机号码', icon: 'none' })
+      if (!form.phone) {
+        Taro.showToast({ title: '请获取手机号码', icon: 'none' })
         return false
       }
 
       return true
+    }
+
+    async function onGetPhoneNumber (e) {
+      const detail = e.detail || {}
+      if (detail.errMsg && !detail.errMsg.includes('ok')) {
+        Taro.showToast({ title: '取消授权', icon: 'none' })
+        return
+      }
+      const code = detail.code
+      if (!code) {
+        Taro.showToast({ title: '获取手机号失败', icon: 'none' })
+        return
+      }
+      try {
+        Taro.showLoading({ title: '获取中...' })
+        const response = await fetchWechatPhoneNumber({ code, updateProfilePhone: true })
+        const data = response.data || response
+        const phone = data.pure_phone_number || data.phone_number || ''
+        if (phone) {
+          form.phone = phone
+          authStore.setPhoneNumber({
+            phone_number: data.phone_number || phone,
+            pure_phone_number: data.pure_phone_number || phone,
+            country_code: data.country_code || ''
+          })
+          Taro.showToast({ title: '手机号已获取', icon: 'success' })
+        }
+      } catch (err) {
+        console.error('[signing-form] getPhoneNumber error:', err)
+        Taro.showToast({ title: '获取手机号失败', icon: 'none' })
+      } finally {
+        Taro.hideLoading()
+      }
     }
 
     async function handleSubmit () {
@@ -267,8 +319,13 @@ export default {
           needsResign.value = false
           copyToClipboard(result.sign_url)
         } else if (result?.detail) {
-          // /start/ 返回 "已完成合作协议签署" 等非错误提示
           Taro.showToast({ title: result.detail, icon: 'none' })
+          if (result.detail.includes('已完成') || result.detail.includes('无需重复')) {
+            authStore.canDoBusiness = true
+            signed.value = true
+            signUrl.value = ''
+            showForm.value = false
+          }
         } else {
           errorMsg.value = '发起签署失败'
         }
@@ -341,7 +398,6 @@ export default {
 
         if (data?.can_do_business) {
           authStore.canDoBusiness = true
-          Taro.setStorageSync('can_do_business', true)
           signed.value = true
           signUrl.value = ''
           needsResign.value = false
@@ -400,6 +456,7 @@ export default {
       hasInProgress,
       form,
       handleSubmit,
+      onGetPhoneNumber,
       copyLink,
       checkStatus,
       cancelAndRefill,
@@ -447,28 +504,108 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 56px;
   margin-bottom: 32px;
+  position: relative;
 }
 
+/* ===== success ✓ ===== */
 .esign-icon-text.success {
   background: #dcfce7;
-  color: #16a34a;
+}
+.esign-icon-text.success::before,
+.esign-icon-text.success::after {
+  content: '';
+  position: absolute;
+  background: #16a34a;
+  border-radius: 3px;
+}
+.esign-icon-text.success::before {
+  width: 16px;
+  height: 48px;
+  transform: rotate(45deg);
+  left: 54px;
+  top: 22px;
+}
+.esign-icon-text.success::after {
+  width: 28px;
+  height: 16px;
+  transform: rotate(-45deg);
+  left: 36px;
+  top: 48px;
 }
 
+/* ===== link ○ ===== */
 .esign-icon-text.link {
   background: #dbeafe;
-  color: #2563eb;
+}
+.esign-icon-text.link::before {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border: 5px solid #2563eb;
+  border-radius: 50%;
 }
 
+/* ===== link--url ○ ===== */
+.esign-icon-text.link--url {
+  background: #dbeafe;
+}
+.esign-icon-text.link--url::before {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border: 5px solid #2563eb;
+  border-radius: 50%;
+}
+
+/* ===== error ✕ ===== */
 .esign-icon-text.error {
   background: #fee2e2;
-  color: #dc2626;
+}
+.esign-icon-text.error::before,
+.esign-icon-text.error::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 6px;
+  background: #dc2626;
+  border-radius: 3px;
+}
+.esign-icon-text.error::before {
+  transform: rotate(45deg);
+}
+.esign-icon-text.error::after {
+  transform: rotate(-45deg);
 }
 
+/* ===== warning ! ===== */
 .esign-icon-text.warning {
   background: #fef3c7;
-  color: #d97706;
+}
+.esign-icon-text.warning::before {
+  content: '';
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 22px 40px 22px;
+  border-color: transparent transparent #d97706 transparent;
+}
+.esign-icon-text.warning::after {
+  content: '';
+  position: absolute;
+  top: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: #d97706;
 }
 
 .esign-title {
@@ -585,9 +722,20 @@ export default {
 }
 
 .warning-icon {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  line-height: 1.4;
+  position: relative;
+}
+.warning-icon::before {
+  content: '!';
+  color: #d97706;
+  font-size: 24px;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .warning-text {
@@ -629,6 +777,33 @@ export default {
   color: #1f2937;
   height: 48px;
   line-height: 48px;
+}
+
+.form-input--readonly {
+  color: #1f2937;
+}
+
+.form-phone-value {
+  flex: 1;
+  font-size: 30px;
+  color: #1f2937;
+  line-height: 48px;
+}
+
+.form-phone-btn {
+  height: 64px;
+  line-height: 64px;
+  font-size: 28px;
+  color: #2563eb;
+  background: #dbeafe;
+  border: none;
+  border-radius: 12px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.form-phone-btn::after {
+  border: none;
 }
 
 .form-agreement {

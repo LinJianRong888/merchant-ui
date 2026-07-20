@@ -6,7 +6,6 @@ import { getCurrentUser } from '@/api/users'
 import { getSigningStatus } from '@/api/esign'
 
 const SESSION_STORAGE_KEY = 'auth_session'
-const CACHE_CAN_DO_BUSINESS = 'can_do_business'
 
 function createDefaultState () {
   return {
@@ -20,7 +19,8 @@ function createDefaultState () {
     phoneNumber: '',
     purePhoneNumber: '',
     countryCode: '',
-    canDoBusiness: false
+    canDoBusiness: false,
+    esignCooperationSigned: false
   }
 }
 
@@ -56,7 +56,6 @@ export const useAuthStore = defineStore('auth', {
       const accessToken = Taro.getStorageSync('access_token') || ''
       const refreshToken = Taro.getStorageSync('refresh_token') || ''
       const session = Taro.getStorageSync(SESSION_STORAGE_KEY) || {}
-      const cachedCanDoBusiness = Taro.getStorageSync(CACHE_CAN_DO_BUSINESS) ?? null
 
       this.$patch({
         ...createDefaultState(),
@@ -64,9 +63,8 @@ export const useAuthStore = defineStore('auth', {
         accessToken,
         refreshToken,
         appSlug: session.appSlug || MERCHANT_MINIAPP_SLUG,
-        canDoBusiness: typeof cachedCanDoBusiness === 'boolean'
-          ? cachedCanDoBusiness
-          : false
+        canDoBusiness: false, // 不持久化，始终以后端为准
+        esignCooperationSigned: false // 不持久化，始终以后端为准
       })
     },
 
@@ -91,7 +89,7 @@ export const useAuthStore = defineStore('auth', {
           : false
 
         this.canDoBusiness = value
-        Taro.setStorageSync(CACHE_CAN_DO_BUSINESS, value)
+        this.esignCooperationSigned = !!signingStatus?.esign_cooperation_signed
       } catch {
         // 后端不可达时保持缓存值，不做修改
         console.warn('[auth] syncCanDoBusiness 失败，保持本地缓存值')

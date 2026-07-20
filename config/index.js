@@ -25,7 +25,12 @@ export default defineConfig(async (merge, { command, mode }) => {
       'process.env.TARO_APP_API_URL': JSON.stringify(apiBaseUrl)
     },
     copy: {
-      patterns: [],
+      patterns: [
+        {
+          from: 'src/assets/kefu-qr.png',
+          to: 'assets/kefu-qr.png'
+        }
+      ],
       options: {}
     },
     framework: 'vue3',

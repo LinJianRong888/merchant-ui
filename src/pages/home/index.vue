@@ -17,7 +17,7 @@
 
     <!-- 公告栏 -->
     <view v-if="!searchQuery.trim()" class="notice-bar">
-      <view class="notice-bar__icon">📢</view>
+      <view class="notice-bar__icon"></view>
       <swiper class="notice-bar__swiper" :autoplay="true" :interval="3000" :circular="true" vertical>
         <swiper-item v-for="(item, index) in notices" :key="index">
           <text class="notice-bar__text">{{ item }}</text>

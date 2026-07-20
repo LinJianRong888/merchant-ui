@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
@@ -82,6 +82,9 @@ function formatQueryError (error) {
 
 export default {
   setup () {
+    const instance = Taro.getCurrentInstance()
+    const selectMode = ref(instance?.router?.params?.select === 'true')
+
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
 
     const {
@@ -124,6 +127,12 @@ export default {
     }
 
     async function handleEditAddress (address) {
+      if (selectMode.value) {
+        // 选择模式：存储选中地址ID并返回上一页
+        Taro.setStorageSync('selected_address_id', address.id)
+        Taro.navigateBack()
+        return
+      }
       await Taro.navigateTo({
         url: `${EDIT_ADDRESS_PAGE_PATH}?id=${address.id}`
       })
