@@ -27,15 +27,16 @@ export async function getCurrentUser () {
 }
 
 /**
- * PUT /api/v1/users/me/
+ * PATCH /api/v1/users/me/ (NEW 2026-07-20)
  *
- * 更新当前登录用户的 profile 信息（如 name）。
+ * 更新当前用户的 profile name（仅 customer 和 agent）。
+ * 更新的是 profile.name，不影响 username。
  *
- * @param {Object} profileData - { profile: { name: string, ... } }
+ * @param {Object} data - { name: string }
  * @returns {Promise<Object>}
  */
-export async function updateCurrentUser (profileData) {
-  const response = await request.put('/api/v1/users/me/', profileData)
+export async function updateCurrentUser (data) {
+  const response = await request.patch('/api/v1/users/me/', data)
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
     return response.data

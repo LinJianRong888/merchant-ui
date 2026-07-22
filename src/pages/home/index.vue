@@ -8,15 +8,12 @@
           placeholder="请输入商品搜索" 
           placeholder-class="search-placeholder" 
           v-model="searchQuery"
-          @input="handleSearchInput"
-          @focus="handleSearchFocus"
-          @blur="handleSearchBlur"
         />
       </view>
     </view>
 
     <!-- 公告栏 -->
-    <view v-if="!searchQuery.trim()" class="notice-bar">
+    <view v-if="!searchQuery.trim() && notices.length" class="notice-bar">
       <view class="notice-bar__icon"></view>
       <swiper class="notice-bar__swiper" :autoplay="true" :interval="3000" :circular="true" vertical>
         <swiper-item v-for="(item, index) in notices" :key="index">
@@ -79,37 +76,23 @@
     <!-- 视频介绍展开 -->
     <view v-if="!searchQuery.trim() && videoExpanded" class="video-intro">
       <text class="video-intro__desc">点击下方视频了解更多产品详情与使用教程</text>
-      <view class="video-intro__placeholder">
-        <view class="video-intro__placeholder-icon"></view>
-        <text class="video-intro__placeholder-text">视频内容即将上线</text>
-      </view>
-    </view>
-
-    <view v-if="!searchQuery.trim()" class="hot-section">
-      <view class="section-header">
-        <text class="section-title">热卖商品</text>
-        <view class="more-btn" @tap="handleMoreProducts">
-          <text class="more-text">更多</text>
-          <text class="more-arrow">›</text>
+      <view class="video-list">
+        <view class="video-item">
+          <channel-video
+            class="channel-video"
+            finder-user-name="sphYEzSZhQGwmxh"
+            feed-id="export/UzFfBgAAxKCBFCBPKAK6jMzT4DCauDwlGNQVW7bwuGuCVPH_Eg"
+          />
+          <text class="video-item__title">臻品堂生物科技有限公司，旗下品牌"柑之饴"，专注奶茶行业，让餐饮业也能赚奶茶行业的钱</text>
         </view>
-      </view>
-
-      <view v-if="isLoading" class="product-grid">
-        <view class="product-card product-card--skeleton" v-for="index in 3" :key="index">
-          <view class="product-image product-image--skeleton"></view>
-          <view class="product-skeleton-line"></view>
-          <view class="product-skeleton-line product-skeleton-line--short"></view>
-        </view>
-      </view>
-
-      <view v-else class="product-grid">
-        <view class="product-card" v-for="(product, index) in hotProducts" :key="index" @tap="handleProductDetail(product.id)">
-          <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="aspectFill" />
-          <view v-else class="product-image product-image--empty">
-            <text class="product-image__text">{{ product.placeholderText }}</text>
-          </view>
-          <text class="product-name">{{ product.name }}</text>
-          <text class="product-price">{{ product.displayPrice }}</text>
+        <!-- 视频2 -->
+        <view class="video-item">
+          <channel-video
+            class="channel-video"
+            finder-user-name="sphYEzSZhQGwmxh"
+            feed-id="export/UzFfBgAAxLeBWGdiJwO6jMzT4DCabupt1GmJtMJtEKTsOry8RQ"
+          />
+          <text class="video-item__title">柑之饴奶茶浓缩液制作奶茶方法，简单快捷！</text>
         </view>
       </view>
     </view>
@@ -125,7 +108,6 @@ import { listSaleProducts } from '@/api/products'
 import './index.scss'
 
 const PRODUCT_DETAIL_PAGE = '/pages/products/detail/index'
-const PRODUCTS_PAGE = '/pages/products/index'
 const LOGIN_PAGE = '/pages/index/index'
 
 function formatPrice (price) {
@@ -162,11 +144,7 @@ export default {
     const searchQuery = ref('')
     const fallbackProducts = ref([])
     const videoExpanded = ref(true)
-    const notices = [
-      '欢迎光临，新品上架中，敬请期待！',
-      '限时优惠活动火热进行中！',
-      '更多好物持续更新，敬请关注！'
-    ]
+    const notices = []
 
     function toggleVideoIntro() {
       videoExpanded.value = !videoExpanded.value
@@ -216,8 +194,6 @@ export default {
         name: item.name
       })))
 
-    const hotProducts = computed(() => productList.value.slice(0, 3))
-
     // 搜索匹配的商品
     const searchResults = computed(() => {
       if (!searchQuery.value || searchQuery.value.trim() === '') {
@@ -232,14 +208,6 @@ export default {
 
     function handleSearchInput(e) {
       searchQuery.value = e.detail?.value || ''
-    }
-
-    function handleSearchFocus() {
-      // 聚焦时不需要特殊处理
-    }
-
-    function handleSearchBlur() {
-      // 失去焦点时不需要特殊处理
     }
 
     async function navigateToLogin () {
@@ -257,12 +225,6 @@ export default {
     function handleProductDetail(productId) {
       Taro.navigateTo({
         url: `${PRODUCT_DETAIL_PAGE}?id=${productId}`
-      })
-    }
-
-    function handleMoreProducts() {
-      Taro.switchTab({
-        url: PRODUCTS_PAGE
       })
     }
 
@@ -284,7 +246,6 @@ export default {
 
     return {
       banners,
-      hotProducts,
       searchResults,
       isLoading,
       searchQuery,
@@ -292,10 +253,7 @@ export default {
       toggleVideoIntro,
       notices,
       handleProductDetail,
-      handleMoreProducts,
       handleSearchInput,
-      handleSearchFocus,
-      handleSearchBlur
     }
   }
 }

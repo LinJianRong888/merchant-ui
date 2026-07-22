@@ -145,19 +145,19 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-      <view v-if="isLoggedIn" class="menu-item" @tap="showInviteModal = true">
+      <view v-if="isLoggedIn" class="menu-item" :class="{ 'menu-item--disabled': inviteBound || canDoBusiness }" @tap="inviteBound || canDoBusiness ? null : showInviteModal = true">
         <view class="menu-left">
-          <view class="menu-icon invite-icon"></view>
-          <text class="menu-text">填写邀请码</text>
+          <view class="menu-icon invite-icon" :class="{ 'invite-icon--done': inviteBound || canDoBusiness }"></view>
+          <text class="menu-text" :class="{ 'menu-text--muted': inviteBound || canDoBusiness }">{{ inviteBound || canDoBusiness ? '已绑定邀请码' : '填写邀请码' }}</text>
         </view>
-        <text class="menu-arrow">›</text>
+        <text class="menu-arrow" :class="{ 'menu-arrow--muted': inviteBound || canDoBusiness }">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item menu-item--sign" @tap="handleSignTap">
         <view class="menu-left">
           <view class="sign-status-dot" :class="signStatusClass"></view>
-          <text class="menu-text" :class="{ 'menu-text--danger': !canDoBusiness }">{{ signingLabel }}</text>
+          <text class="menu-text" :class="{ 'menu-text--danger': !canDoBusiness && !hasSigned }">{{ signingLabel }}</text>
         </view>
-        <text class="menu-arrow" :class="{ 'menu-arrow--danger': !canDoBusiness }">›</text>
+        <text class="menu-arrow" :class="{ 'menu-arrow--danger': !canDoBusiness && !hasSigned }">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @tap="handleLogout">
         <view class="menu-left">
@@ -287,7 +287,7 @@ export default {
 
       try {
         Taro.showLoading({ title: '保存中...' })
-        const result = await updateCurrentUser({ profile: { name } })
+        const result = await updateCurrentUser({ name })
         console.log('[user] update name result:', result)
         // 同步本地缓存 + 刷新后端数据
         localNickname.value = name
@@ -399,22 +399,23 @@ export default {
       }
     }, { immediate: true })
 
-    // 是否已签署完成（不论 can_do_business）
+    // 是否已签署完成（不论 can_do_business，但不包含 needs_resign 的情况）
     const hasSigned = computed(() => {
       const info = signingInfo.value
+      if (info?.needs_resign) return false
       return !!(info?.esign_cooperation_signed || info?.status === 'completed')
     })
 
     const signStatusClass = computed(() => {
-      if (canDoBusiness.value || hasSigned.value) return 'dot--green'
       if (signingInfo.value?.needs_resign) return 'dot--red'
+      if (canDoBusiness.value || hasSigned.value) return 'dot--green'
       if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return 'dot--yellow'
       return 'dot--gray'
     })
 
     const signingLabel = computed(() => {
-      if (canDoBusiness.value || hasSigned.value) return '合作协议已签署'
       if (signingInfo.value?.needs_resign) return '需重新签署协议'
+      if (canDoBusiness.value || hasSigned.value) return '合作协议已签署'
       if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return '签署进行中'
       return '签署合作协议'
     })
@@ -472,18 +473,31 @@ export default {
     })
 
     // ---- 邀请码 ----
+    const INVITE_BOUND_KEY = 'invite_bound'
     const showInviteModal = ref(false)
     const inviteCodeInput = ref('')
     const inviteSubmitting = ref(false)
+    // 从 localStorage 恢复绑定状态（canDoBusiness 由后端同步，inviteBound 由前端记录）
+    const inviteBound = ref(Taro.getStorageSync(INVITE_BOUND_KEY) || false)
 
     function onInviteCodeInput (e) {
       inviteCodeInput.value = e.detail?.value || ''
+    }
+
+    function friendInviteError (raw) {
+      if (!raw) return '绑定失败，请重试'
+      if (raw.includes('does not match')) return '你填写的邀请码不存在或已失效，请检查后重新输入。'
+      return raw
     }
 
     async function handleBindInviteCode () {
       const code = inviteCodeInput.value.trim()
       if (!code) {
         Taro.showToast({ title: '请输入邀请码', icon: 'none' })
+        return
+      }
+      if (/[^a-zA-Z0-9]/.test(code)) {
+        Taro.showToast({ title: '邀请码仅支持英文和数字', icon: 'none' })
         return
       }
 
@@ -495,16 +509,18 @@ export default {
           Taro.showToast({ title: '邀请码绑定成功', icon: 'success' })
           showInviteModal.value = false
           inviteCodeInput.value = ''
+          inviteBound.value = true
+          Taro.setStorageSync(INVITE_BOUND_KEY, true)
           // 刷新签署状态（邀请码可能影响 can_do_business）
           authStore.syncCanDoBusiness()
           void refetchSigningStatus()
         } else {
-          const msg = res.data?.detail || '邀请码无效'
+          const msg = friendInviteError(res.data?.detail)
           Taro.showToast({ title: msg, icon: 'none' })
         }
       } catch (err) {
         console.error('[user] bindInviteCode error:', err)
-        const msg = err?.message || err?.data?.detail || '绑定失败，请重试'
+        const msg = friendInviteError(err?.message || err?.data?.detail)
         Taro.showToast({ title: msg, icon: 'none' })
       } finally {
         inviteSubmitting.value = false
@@ -564,6 +580,7 @@ export default {
       greetingText,
       displayName,
       canDoBusiness,
+      hasSigned,
       signStatusClass,
       signingLabel,
       handleSignTap,
@@ -575,6 +592,7 @@ export default {
       goToCustomerService,
       handleLogout,
       showInviteModal,
+      inviteBound,
       inviteCodeInput,
       inviteSubmitting,
       onInviteCodeInput,

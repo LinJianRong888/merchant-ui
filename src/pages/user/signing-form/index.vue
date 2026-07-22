@@ -402,6 +402,12 @@ export default {
           signUrl.value = ''
           needsResign.value = false
           Taro.showToast({ title: '签署完成', icon: 'success' })
+        } else if (data?.esign_cooperation_signed || data?.status === 'completed') {
+          // 签署已完成但 can_do_business 为 false（如无邀请人）
+          signed.value = true
+          signUrl.value = ''
+          needsResign.value = false
+          Taro.showToast({ title: '签署完成', icon: 'success' })
         } else if (data?.status_label === '部分已签') {
           Taro.showToast({ title: '您已完成签署，等待平台方签署', icon: 'none', duration: 2000 })
           setTimeout(() => {
@@ -430,6 +436,8 @@ export default {
       partialSigned.value = false
       needsResign.value = false
       hasInProgress.value = false
+      form.realName = ''
+      form.phone = ''
       initSign()
     }
 

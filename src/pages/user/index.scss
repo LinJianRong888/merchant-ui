@@ -522,6 +522,28 @@
   }
 }
 
+.invite-icon--done {
+  &::before {
+    border-color: #16a34a;
+  }
+  &::after {
+    border-color: #16a34a;
+  }
+}
+
+.menu-item--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.menu-text--muted {
+  color: #999;
+}
+
+.menu-arrow--muted {
+  color: #d0d0d0;
+}
+
 /* ---- 邀请码弹窗 ---- */
 .invite-modal-mask {
   position: fixed;
