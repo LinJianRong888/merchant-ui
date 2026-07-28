@@ -4,6 +4,20 @@
       <text class="page-title">商品</text>
     </view>
 
+    <!-- 未签署协议提示 -->
+    <view v-if="authStore.isAuthenticated && !authStore.canDoBusiness" class="sign-notice" @tap="goToSigning">
+      <view class="sign-notice__icon"></view>
+      <text class="sign-notice__text">您还未签署合作协议，签署后方可下单</text>
+      <text class="sign-notice__arrow">›</text>
+    </view>
+
+    <!-- 未登录提示 -->
+    <view v-if="!authStore.isAuthenticated" class="sign-notice sign-notice--login" @tap="handleLoginPrompt">
+      <view class="sign-notice__icon sign-notice__icon--login"></view>
+      <text class="sign-notice__text">您还未登录，登录后方可下单</text>
+      <text class="sign-notice__arrow">›</text>
+    </view>
+
     <view v-if="isLoading" class="product-skeleton-list">
       <view v-for="item in skeletonItems" :key="item" class="product-card product-card--skeleton">
         <view class="product-card__media product-card__media--skeleton"></view>
@@ -21,9 +35,20 @@
       <button class="state-panel__button" :loading="isFetching" @tap="handleRetry">重试</button>
     </view>
 
-    <view v-else-if="!products.length" class="state-panel state-panel--empty">
+    <view v-else-if="!products.length && authStore.isAuthenticated" class="state-panel state-panel--empty">
       <text class="state-panel__title">暂无商品</text>
       <text class="state-panel__desc">当前没有可售商品</text>
+    </view>
+
+    <view v-else-if="!products.length" class="product-skeleton-list">
+      <view v-for="item in skeletonItems" :key="item" class="product-card product-card--skeleton">
+        <view class="product-card__media product-card__media--skeleton"></view>
+        <view class="product-card__body">
+          <view class="skeleton-line skeleton-line--title"></view>
+          <view class="skeleton-line skeleton-line--meta"></view>
+          <view class="skeleton-line skeleton-line--meta short"></view>
+        </view>
+      </view>
     </view>
 
     <view v-else class="product-list">
@@ -67,7 +92,7 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useAppQuery } from '@/utils/app-query'
 
@@ -77,7 +102,7 @@ import { useAuthStore } from '@/stores/auth'
 import './index.scss'
 
 const PRODUCT_DETAIL_PAGE = '/pages/products/detail/index'
-const LOGIN_PAGE = '/pages/index/index'
+const SIGNING_PAGE = '/pages/user/signing-form/index'
 
 function formatPrice (price) {
   const value = Number(price)
@@ -131,8 +156,7 @@ export default {
       refetch
     } = useAppQuery({
       queryKey: ['products', 'list'],
-      queryFn: async () => normalizeProducts(await listSaleProducts()),
-      enabled: computed(() => authStore.isAuthenticated)
+      queryFn: async () => normalizeProducts(await listSaleProducts())
     })
 
     const productList = computed(() => products.value || fallbackProducts.value)
@@ -169,18 +193,6 @@ export default {
       }
     }
 
-    async function navigateToLogin () {
-      await Taro.redirectTo({
-        url: LOGIN_PAGE
-      })
-    }
-
-    async function ensureAuthenticated () {
-      if (!authStore.isAuthenticated) {
-        await navigateToLogin()
-      }
-    }
-
     async function handleRetry () {
       await refreshProducts()
     }
@@ -191,12 +203,26 @@ export default {
       })
     }
 
+    function goToSigning () {
+      Taro.navigateTo({ url: SIGNING_PAGE })
+    }
+
+    function handleLoginPrompt () {
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再使用此功能',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: '/pages/index/index' })
+          }
+        }
+      })
+    }
+
     useDidShow(() => {
       authStore.hydrate()
-      void ensureAuthenticated()
-      if (authStore.isAuthenticated) {
-        void refreshProducts()
-      }
+      void refreshProducts()
     })
 
     usePullDownRefresh(async () => {
@@ -207,15 +233,36 @@ export default {
       }
     })
 
+    // 监听静默 token 就绪，自动重试加载
+    watch(
+      () => authStore.silentTokenVersion,
+      (version) => {
+        if (version > 0 && !authStore.isAuthenticated && !products.value?.length) {
+          console.log('[products-page] 检测到静默 token 就绪，重试加载商品')
+          void refreshProducts()
+        }
+      }
+    )
+
     return {
+      authStore,
       errorMessage,
       handleRetry,
       handleOpenDetail,
+      goToSigning,
+      handleLoginPrompt,
       isError: hasError,
       isFetching,
       isLoading,
       products: productList,
       skeletonItems
+    }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡商户端 - 精选好物',
+      path: '/pages/products/index'
     }
   }
 }

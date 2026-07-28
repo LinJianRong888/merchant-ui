@@ -19,6 +19,68 @@
   color: $color-text-primary;
 }
 
+/* ---- 未签署协议提示 ---- */
+.sign-notice {
+  display: flex;
+  align-items: center;
+  margin: 0 0 24rpx;
+  padding: 20rpx 24rpx;
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border-radius: 16rpx;
+  border: 1rpx solid #fcd34d;
+}
+
+.sign-notice__icon {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 18rpx;
+  background: #f59e0b;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.sign-notice__icon::before {
+  content: '!';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.sign-notice__text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #92400e;
+  margin-left: 16rpx;
+}
+
+.sign-notice__arrow {
+  font-size: 28rpx;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+/* ---- 未登录提示（蓝色风格，区别于签署提示） ---- */
+.sign-notice--login {
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  border-color: #93c5fd;
+}
+
+.sign-notice__icon--login {
+  background: #3b82f6;
+}
+
+.sign-notice--login .sign-notice__text {
+  color: #1e40af;
+}
+
+.sign-notice--login .sign-notice__arrow {
+  color: #2563eb;
+}
+
 .product-list,
 .product-skeleton-list {
   display: flex;

@@ -54,6 +54,50 @@
   color: #92400e;
 }
 
+/* 未登录提示 */
+.login-notice {
+  display: flex;
+  align-items: center;
+  margin: 0 0 16rpx;
+  padding: 20rpx 24rpx;
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  border-radius: 16rpx;
+  border: 1rpx solid #93c5fd;
+}
+
+.login-notice__icon {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 18rpx;
+  background: #3b82f6;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.login-notice__icon::before {
+  content: '!';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.login-notice__text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #1e40af;
+  margin-left: 16rpx;
+}
+
+.login-notice__arrow {
+  font-size: 28rpx;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
 .search-bar {
   position: sticky;
   top: 0;
@@ -123,6 +167,10 @@
   background: $color-bg-white;
   border-radius: 16rpx;
   padding: 20rpx 16rpx;
+}
+
+.intro-card--hover {
+  background: #f0f0f0;
 }
 
 .intro-card__icon {
@@ -229,6 +277,36 @@
   width: 100%;
   height: 800rpx;
   margin-top: 16rpx;
+}
+
+.banner-swiper--login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16rpx 24rpx 0;
+  width: auto;
+  height: 400rpx;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: 24rpx;
+  border: 2rpx dashed #93c5fd;
+}
+
+.banner-login-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.banner-login-text {
+  font-size: 32rpx;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.banner-login-sub {
+  font-size: 24rpx;
+  color: #3b82f6;
 }
 
 .banner-swiper--empty {

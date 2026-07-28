@@ -6,6 +6,13 @@
       </view>
     </view>
 
+    <!-- 未登录提示 -->
+    <view v-if="!authStore.isAuthenticated" class="login-notice" @tap="handleLoginPrompt">
+      <view class="login-notice__icon"></view>
+      <text class="login-notice__text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice__arrow">›</text>
+    </view>
+
     <view v-if="isLoading" class="loading-view">
       <text class="loading-text">加载中...</text>
     </view>
@@ -64,6 +71,7 @@ import { computed, ref, watch } from 'vue'
 import Taro, { useLoad, usePullDownRefresh } from '@tarojs/taro'
 
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 
 import './index.scss'
 
@@ -78,6 +86,7 @@ function formatPrice(price) {
 export default {
   setup() {
     const cartStore = useCartStore()
+    const authStore = useAuthStore()
     const isLoading = ref(true)
     const isCheckoutLoading = ref(false)
     const selectedItemIds = ref([])
@@ -129,7 +138,20 @@ export default {
 
     function goHome() {
       Taro.switchTab({
-        url: '/pages/home/index'
+        url: '/pages/products/index'
+      })
+    }
+
+    function handleLoginPrompt () {
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再使用此功能',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: '/pages/index/index' })
+          }
+        }
       })
     }
 
@@ -215,6 +237,7 @@ export default {
     })
 
     return {
+      authStore,
       cartItems,
       cartTotalCount,
       cartTotalAmount,
@@ -227,6 +250,7 @@ export default {
       hasSelectedItems,
       isAllSelected,
       goHome,
+      handleLoginPrompt,
       formatPrice,
       handleDecreaseQuantity,
       handleIncreaseQuantity,
@@ -235,6 +259,13 @@ export default {
       handleCheckout,
       toggleSelectItem,
       toggleSelectAll
+    }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡商户端',
+      path: '/pages/home/index'
     }
   }
 }

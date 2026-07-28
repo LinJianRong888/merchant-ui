@@ -64,7 +64,7 @@
             class="form-phone-btn"
             open-type="getPhoneNumber"
             @getphonenumber="onGetPhoneNumber"
-          >获取微信手机号</button>
+          >获取手机号</button>
         </view>
       </view>
 
@@ -84,9 +84,20 @@
     <view v-if="pageState === 'signUrl'" class="esign-result">
       <view class="esign-icon-text link--url"></view>
       <text class="esign-title">签署链接已生成</text>
-      <text class="esign-desc">请在外部浏览器中打开以下链接完成签署：</text>
-      <view class="esign-url-box">
-        <text class="esign-url">{{ signUrl }}</text>
+      <text class="esign-desc">请按以下步骤完成签署：</text>
+      <view class="esign-steps">
+        <view class="esign-step">
+          <text class="esign-step__num">1</text>
+          <text class="esign-step__text">点击下方按钮，复制签署链接</text>
+        </view>
+        <view class="esign-step">
+          <text class="esign-step__num">2</text>
+          <text class="esign-step__text">在浏览器中打开链接</text>
+        </view>
+        <view class="esign-step">
+          <text class="esign-step__num">3</text>
+          <text class="esign-step__text">在支付宝中完成签署</text>
+        </view>
       </view>
       <button class="esign-btn primary" @tap="copyLink">复制签署链接</button>
       <button class="esign-btn" @tap="checkStatus">我已完成签署</button>
@@ -342,7 +353,7 @@ export default {
       Taro.setClipboardData({
         data: url,
         success: () => {
-          Taro.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'success', duration: 2000 })
+          Taro.showToast({ title: '链接已复制，请在浏览器粘贴后在支付宝完成签署', icon: 'success', duration: 2500 })
         }
       })
     }
@@ -471,6 +482,13 @@ export default {
       goBack,
       retry,
       handleResign
+    }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡商户端',
+      path: '/pages/home/index'
     }
   }
 }
@@ -631,19 +649,41 @@ export default {
   margin-bottom: 40px;
 }
 
-.esign-url-box {
+.esign-steps {
   width: 100%;
   background: #ffffff;
   border-radius: 16px;
-  padding: 24px;
+  padding: 32px 28px;
   margin-bottom: 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.esign-url {
+.esign-step {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.esign-step__num {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
   font-size: 24px;
-  color: #3b82f6;
-  word-break: break-all;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.esign-step__text {
+  font-size: 28px;
+  color: #374151;
   line-height: 1.5;
 }
 

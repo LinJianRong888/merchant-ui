@@ -57,9 +57,24 @@ function normalizeObject(input) {
   }, {})
 }
 
+/**
+ * 判断字符串是否包含 URL 编码字符（% 后跟两位十六进制）
+ */
+function needsDecoding(value) {
+  if (typeof value !== 'string' || !value) {
+    return false
+  }
+  return /%[0-9A-Fa-f]{2}/.test(value)
+}
+
 function safeDecode(value) {
   if (typeof value !== 'string' || !value) {
     return ''
+  }
+
+  // 只解码包含编码字符的字符串，防止双重解码
+  if (!needsDecoding(value)) {
+    return value
   }
 
   try {
@@ -129,29 +144,98 @@ function getSceneMeta(sceneValue) {
 }
 
 export function getCurrentEnterOptions(Taro) {
+  // 优先使用 getEnterOptionsSync（获取当前进入参数，适用于热启动）
   if (Taro && typeof Taro.getEnterOptionsSync === 'function') {
-    return Taro.getEnterOptionsSync()
+    try {
+      return Taro.getEnterOptionsSync()
+    } catch {
+      // fall through
+    }
   }
 
+  // 降级到 getLaunchOptionsSync（冷启动参数）
   if (Taro && typeof Taro.getLaunchOptionsSync === 'function') {
-    return Taro.getLaunchOptionsSync()
+    try {
+      return Taro.getLaunchOptionsSync()
+    } catch {
+      // fall through
+    }
   }
 
   return null
+}
+
+/**
+ * 从多种来源提取邀请码，按优先级排列：
+ * 1. query.invite_code        — 路径直传参数
+ * 2. query.scene 解码后的 invite_code  — 小程序码 scene 参数（编码在 query 中）
+ * 3. options.scene 解码后的 invite_code — 部分平台将 scene 放在顶层
+ */
+function extractInviteCode(options) {
+  const normalizedOptions = normalizeObject(options)
+  const query = normalizeObject(normalizedOptions.query)
+
+  // 来源 1：直接的 query 参数
+  if (query.invite_code) {
+    console.log('[scan-entry] invite_code found in query.invite_code:', query.invite_code)
+    return {
+      inviteCode: String(query.invite_code),
+      source: 'query.invite_code'
+    }
+  }
+
+  // 来源 2：query.scene 中的编码参数
+  if (query.scene) {
+    const payload = parseScenePayload(query.scene)
+    if (payload.params.invite_code) {
+      console.log('[scan-entry] invite_code found in query.scene (decoded):', payload.params.invite_code)
+      return {
+        inviteCode: String(payload.params.invite_code),
+        source: 'query.scene',
+        scenePayload: payload
+      }
+    }
+    // query.scene 本身可能就是 invite_code（键值对不带 = 号的情况）
+    console.log('[scan-entry] query.scene present but no invite_code in decoded params, raw:', query.scene)
+  }
+
+  // 来源 3：options.scene（部分平台的场景值在顶层）
+  const rawScene = normalizedOptions.scene
+  if (rawScene && typeof rawScene === 'string') {
+    const payload = parseScenePayload(rawScene)
+    if (payload.params.invite_code) {
+      console.log('[scan-entry] invite_code found in options.scene (decoded):', payload.params.invite_code)
+      return {
+        inviteCode: String(payload.params.invite_code),
+        source: 'options.scene',
+        scenePayload: payload
+      }
+    }
+    console.log('[scan-entry] options.scene present but no invite_code, raw:', rawScene)
+  }
+
+  console.log('[scan-entry] invite_code not found in any source')
+  return {
+    inviteCode: '',
+    source: 'not-found'
+  }
 }
 
 export function getScanEntryDebugInfo(options = {}) {
   const normalizedOptions = normalizeObject(options)
   const query = normalizeObject(normalizedOptions.query)
   const sceneMeta = getSceneMeta(normalizedOptions.scene)
-  const scenePayload = parseScenePayload(query.scene)
 
-  const inviteCode = query.invite_code || scenePayload.params.invite_code || ''
-  const inviteCodeSource = query.invite_code
-    ? 'query.invite_code'
-    : scenePayload.params.invite_code
-      ? 'query.scene'
-      : 'not-found'
+  const extracted = extractInviteCode(options)
+  const scenePayload = extracted.scenePayload || parseScenePayload(query.scene || normalizedOptions.scene || '')
+
+  console.log('[scan-entry] debug info', {
+    path: normalizedOptions.path || '',
+    scene: sceneMeta,
+    queryKeys: Object.keys(query),
+    inviteCode: extracted.inviteCode ? `${extracted.inviteCode.slice(0, 4)}...` : '(empty)',
+    source: extracted.source
+  })
 
   return {
     path: normalizedOptions.path || '',
@@ -161,8 +245,8 @@ export function getScanEntryDebugInfo(options = {}) {
     sceneCategory: sceneMeta.category,
     isScanEntry: sceneMeta.matched,
     query,
-    inviteCode,
-    inviteCodeSource,
+    inviteCode: extracted.inviteCode,
+    inviteCodeSource: extracted.source,
     scenePayloadRaw: scenePayload.raw,
     scenePayloadDecoded: scenePayload.decoded,
     scenePayloadParams: scenePayload.params,

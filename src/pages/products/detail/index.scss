@@ -227,6 +227,75 @@
   border: none;
 }
 
+/* ---- 未签署协议 ---- */
+.detail-sign-notice {
+  display: flex;
+  align-items: center;
+  margin: 0 24rpx 24rpx;
+  padding: 20rpx 24rpx;
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border-radius: 16rpx;
+  border: 1rpx solid #fcd34d;
+}
+
+.detail-sign-notice__icon {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 18rpx;
+  background: #f59e0b;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.detail-sign-notice__icon::before {
+  content: '!';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.detail-sign-notice__text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #92400e;
+  margin-left: 16rpx;
+}
+
+.detail-sign-notice__arrow {
+  font-size: 28rpx;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.bottom-right--sign {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-left: 32rpx;
+}
+
+.btn-sign-now {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #D4A574 0%, #B8865E 50%, #8D6E63 100%);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 700;
+  border-radius: 999px;
+  border: none;
+  padding: 0 32rpx;
+}
+
+.btn-sign-now::after {
+  border: none;
+}
+
 .detail-skeleton {
   display: flex;
   flex-direction: column;

@@ -53,21 +53,29 @@
       </view>
     </view>
 
-    <swiper v-else-if="banners.length" class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500">
+    <!-- 未登录提示 -->
+    <view v-if="!searchQuery.trim() && !authStore.isAuthenticated" class="login-notice" @tap="handleLoginPrompt">
+      <view class="login-notice__icon"></view>
+      <text class="login-notice__text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice__arrow">›</text>
+    </view>
+
+    <!-- 轮播图 -->
+    <swiper v-if="!searchQuery.trim() && banners.length" class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500">
       <swiper-item v-for="item in banners" :key="item.id">
         <image class="banner-image" :src="item.image" mode="aspectFill" />
       </swiper-item>
     </swiper>
 
-    <view v-else class="banner-swiper banner-swiper--empty">
+    <view v-else-if="!searchQuery.trim()" class="banner-swiper banner-swiper--loading">
       <view class="banner-image banner-image--empty">
-        <text class="banner-image__text">暂无轮播图片</text>
+        <text class="banner-image__text">加载中...</text>
       </view>
     </view>
 
     <!-- 介绍 -->
     <view v-if="!searchQuery.trim()" class="intro-cards">
-      <view class="intro-card" @tap="toggleVideoIntro">
+      <view class="intro-card" hover-class="intro-card--hover" @tap="toggleVideoIntro">
         <view class="intro-card__icon"></view>
         <text class="intro-card__title">视频介绍说明</text>
       </view>
@@ -90,7 +98,7 @@
           <channel-video
             class="channel-video"
             finder-user-name="sphYEzSZhQGwmxh"
-            feed-id="export/UzFfBgAAxLeBWGdiJwO6jMzT4DCabupt1GmJtMJtEKTsOry8RQ"
+            feed-id="export/UzFfBgAAxL-BVD5TOVWDjMzT4DCadwITgbvaqlUAzjvlJpwYtw"
           />
           <text class="video-item__title">柑之饴奶茶浓缩液制作奶茶方法，简单快捷！</text>
         </view>
@@ -101,14 +109,13 @@
 
 <script>
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { listSaleProducts } from '@/api/products'
 import './index.scss'
 
 const PRODUCT_DETAIL_PAGE = '/pages/products/detail/index'
-const LOGIN_PAGE = '/pages/index/index'
 
 function formatPrice (price) {
   const value = Number(price)
@@ -157,8 +164,7 @@ export default {
       refetch
     } = useAppQuery({
       queryKey: ['products', 'home'],
-      queryFn: async () => normalizeProducts(await listSaleProducts()),
-      enabled: computed(() => authStore.isAuthenticated)
+      queryFn: async () => normalizeProducts(await listSaleProducts())
     })
 
     const productList = computed(() => products.value || fallbackProducts.value)
@@ -210,16 +216,17 @@ export default {
       searchQuery.value = e.detail?.value || ''
     }
 
-    async function navigateToLogin () {
-      await Taro.redirectTo({
-        url: LOGIN_PAGE
+    function handleLoginPrompt () {
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再使用此功能',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: '/pages/index/index' })
+          }
+        }
       })
-    }
-
-    async function ensureAuthenticated () {
-      if (!authStore.isAuthenticated) {
-        await navigateToLogin()
-      }
     }
 
     function handleProductDetail(productId) {
@@ -230,10 +237,7 @@ export default {
 
     useDidShow(() => {
       authStore.hydrate()
-      void ensureAuthenticated()
-      if (authStore.isAuthenticated) {
-        void refreshProducts()
-      }
+      void refreshProducts()
     })
 
     usePullDownRefresh(async () => {
@@ -244,7 +248,19 @@ export default {
       }
     })
 
+    // 监听静默 token 就绪，自动重试加载
+    watch(
+      () => authStore.silentTokenVersion,
+      (version) => {
+        if (version > 0 && !authStore.isAuthenticated && !productList.value?.length) {
+          console.log('[home-page] 检测到静默 token 就绪，重试加载商品')
+          void refreshProducts()
+        }
+      }
+    )
+
     return {
+      authStore,
       banners,
       searchResults,
       isLoading,
@@ -254,6 +270,20 @@ export default {
       notices,
       handleProductDetail,
       handleSearchInput,
+      handleLoginPrompt,
+    }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡 - 品质奶茶原料供应商',
+      path: '/pages/home/index'
+    }
+  },
+
+  onShareTimeline () {
+    return {
+      title: '柑之怡 - 品质奶茶原料供应商'
     }
   }
 }

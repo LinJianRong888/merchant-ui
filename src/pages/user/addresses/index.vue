@@ -179,6 +179,13 @@ export default {
       isLoading,
       skeletonItems
     }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡商户端',
+      path: '/pages/home/index'
+    }
   }
 }
 </script>

@@ -66,6 +66,13 @@
         </view>
       </view>
 
+      <!-- 未绑定业务员提示 -->
+      <view v-if="isLoggedIn && !inviteBound && !hasAgent" class="no-agent-tip" @tap="showInviteModal = true">
+        <view class="no-agent-tip__icon"></view>
+        <text class="no-agent-tip__text">未绑定业务员，点击填写邀请码</text>
+        <text class="no-agent-tip__arrow">›</text>
+      </view>
+
       <!-- 底部地址栏 -->
       <view class="address-bar">
         <view class="address-left">
@@ -73,6 +80,13 @@
           <text class="address-text">{{ defaultAddress }}</text>
         </view>
       </view>
+    </view>
+
+    <!-- 未登录提示 -->
+    <view v-if="!isLoggedIn" class="login-notice" @tap="goToLogin">
+      <view class="login-notice__icon"></view>
+      <text class="login-notice__text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice__arrow">›</text>
     </view>
 
     <view class="order-section">
@@ -145,12 +159,12 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-      <view v-if="isLoggedIn" class="menu-item" :class="{ 'menu-item--disabled': inviteBound || canDoBusiness }" @tap="inviteBound || canDoBusiness ? null : showInviteModal = true">
+      <view v-if="isLoggedIn" class="menu-item" :class="{ 'menu-item--disabled': inviteBound || hasAgent }" @tap="inviteBound || hasAgent ? null : showInviteModal = true">
         <view class="menu-left">
-          <view class="menu-icon invite-icon" :class="{ 'invite-icon--done': inviteBound || canDoBusiness }"></view>
-          <text class="menu-text" :class="{ 'menu-text--muted': inviteBound || canDoBusiness }">{{ inviteBound || canDoBusiness ? '已绑定邀请码' : '填写邀请码' }}</text>
+          <view class="menu-icon invite-icon" :class="{ 'invite-icon--done': inviteBound || hasAgent }"></view>
+          <text class="menu-text" :class="{ 'menu-text--muted': inviteBound || hasAgent }">{{ inviteBound || hasAgent ? '已绑定邀请码' : '填写邀请码' }}</text>
         </view>
-        <text class="menu-arrow" :class="{ 'menu-arrow--muted': inviteBound || canDoBusiness }">›</text>
+        <text class="menu-arrow" :class="{ 'menu-arrow--muted': inviteBound || hasAgent }">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item menu-item--sign" @tap="handleSignTap">
         <view class="menu-left">
@@ -185,6 +199,10 @@
           <button class="invite-modal-btn confirm" :disabled="inviteSubmitting" @tap="handleBindInviteCode">
             {{ inviteSubmitting ? '提交中...' : '确认' }}
           </button>
+        </view>
+        <view class="invite-modal-no-code">
+          <text class="invite-modal-no-code__text">没有邀请码？</text>
+          <button class="invite-modal-no-code__btn" open-type="contact">联系客服获取</button>
         </view>
       </view>
     </view>
@@ -378,6 +396,7 @@ export default {
     // ---- 签约 ----
     // can_do_business 统一从 authStore 读取（默认 false，启动时与后端核对）
     const canDoBusiness = computed(() => authStore.canDoBusiness)
+    const hasAgent = computed(() => authStore.hasAgent)
 
     const userType = computed(() => userInfo.value?.user_type || 'customer')
 
@@ -396,6 +415,7 @@ export default {
       if (info && typeof info.can_do_business === 'boolean') {
         authStore.canDoBusiness = info.can_do_business
         authStore.esignCooperationSigned = !!info.esign_cooperation_signed
+        authStore.hasAgent = info.can_do_business || (info.business_eligibility_reason !== 'customer_agent_not_assigned')
       }
     }, { immediate: true })
 
@@ -580,6 +600,7 @@ export default {
       greetingText,
       displayName,
       canDoBusiness,
+      hasAgent,
       hasSigned,
       signStatusClass,
       signingLabel,
@@ -597,6 +618,13 @@ export default {
       inviteSubmitting,
       onInviteCodeInput,
       handleBindInviteCode
+    }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡商户端',
+      path: '/pages/home/index'
     }
   }
 }

@@ -23,9 +23,13 @@ function safeSerialize (value) {
 
 function getAccessToken () {
   try {
-    return Taro.getStorageSync('access_token') || null
+    const token = Taro.getStorageSync('access_token') || null
+    if (token) return { token, source: 'auth' }
+    const silentToken = Taro.getStorageSync('silent_token') || null
+    if (silentToken) return { token: silentToken, source: 'silent' }
+    return { token: null, source: null }
   } catch {
-    return null
+    return { token: null, source: null }
   }
 }
 
@@ -97,10 +101,13 @@ async function baseRequest (options) {
     ...header
   }
 
+  let tokenSource = null
+
   if (!skipAuth) {
-    const token = getAccessToken()
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
+    const auth = getAccessToken()
+    if (auth.token) {
+      headers.Authorization = `Bearer ${auth.token}`
+      tokenSource = auth.source
     }
   }
 
@@ -146,7 +153,7 @@ async function baseRequest (options) {
 
   console.debug(`${debugLabel} response json:`, JSON.stringify(response.data, null, 2))
 
-  if (!skipAuth && response.statusCode === 401) {
+  if (!skipAuth && response.statusCode === 401 && tokenSource === 'auth') {
     handleUnauthorizedResponse()
   }
 

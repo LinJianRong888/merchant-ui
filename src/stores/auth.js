@@ -20,7 +20,9 @@ function createDefaultState () {
     purePhoneNumber: '',
     countryCode: '',
     canDoBusiness: false,
-    esignCooperationSigned: false
+    esignCooperationSigned: false,
+    hasAgent: false, // 是否已绑定业务员（自行填写 或 后端指派）
+    silentTokenVersion: 0 // 静默 token 版本，变更时通知页面刷新
   }
 }
 
@@ -64,7 +66,8 @@ export const useAuthStore = defineStore('auth', {
         refreshToken,
         appSlug: session.appSlug || MERCHANT_MINIAPP_SLUG,
         canDoBusiness: false, // 不持久化，始终以后端为准
-        esignCooperationSigned: false // 不持久化，始终以后端为准
+        esignCooperationSigned: false, // 不持久化，始终以后端为准
+        hasAgent: false // 不持久化，始终以后端为准
       })
     },
 
@@ -75,7 +78,7 @@ export const useAuthStore = defineStore('auth', {
      * 用签约状态 API 的 can_do_business 覆盖缓存和状态。
      */
     async syncCanDoBusiness () {
-      if (!this.accessToken) return
+      if (!this.accessToken) return false
 
       try {
         // 先获取 user_type
@@ -90,9 +93,12 @@ export const useAuthStore = defineStore('auth', {
 
         this.canDoBusiness = value
         this.esignCooperationSigned = !!signingStatus?.esign_cooperation_signed
-      } catch {
-        // 后端不可达时保持缓存值，不做修改
+        // 判断是否有业务员：canDoBusiness 为 true 一定有；false 时看原因
+        this.hasAgent = value || (signingStatus?.business_eligibility_reason !== 'customer_agent_not_assigned')
+        return true
+      } catch (err) {
         console.warn('[auth] syncCanDoBusiness 失败，保持本地缓存值')
+        return false
       }
     },
 
@@ -106,6 +112,9 @@ export const useAuthStore = defineStore('auth', {
         openid: payload.openid || '',
         isNewUser: Boolean(payload.is_new_user)
       })
+
+      // 清理静默 token，后续使用正式 token
+      Taro.removeStorageSync('silent_token')
 
       persistSession(this.$state)
     },
@@ -134,6 +143,11 @@ export const useAuthStore = defineStore('auth', {
     clearSession () {
       this.$patch(createDefaultState())
       clearPersistedSession()
+      Taro.removeStorageSync('silent_token')
+    },
+
+    notifySilentTokenReady () {
+      this.silentTokenVersion += 1
     }
   }
 })

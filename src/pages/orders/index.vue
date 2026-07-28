@@ -592,6 +592,13 @@ export default {
       handleCancelOrder,
       formatCountdown
     }
+  },
+
+  onShareAppMessage () {
+    return {
+      title: '柑之怡商户端',
+      path: '/pages/home/index'
+    }
   }
 }
 </script>

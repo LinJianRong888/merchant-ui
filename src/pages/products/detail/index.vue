@@ -24,6 +24,13 @@
     </view>
 
     <view v-else-if="product" class="product-detail-shell">
+      <!-- 未签署协议提示 -->
+      <view v-if="authStore.isAuthenticated && !canDoBusiness" class="detail-sign-notice" @tap="goToSigning">
+        <view class="detail-sign-notice__icon"></view>
+        <text class="detail-sign-notice__text">您还未签署合作协议，签署后方可下单</text>
+        <text class="detail-sign-notice__arrow">›</text>
+      </view>
+
       <view class="product-image-wrap">
         <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="widthFix" />
         <view v-else class="product-image product-image--empty">
@@ -81,13 +88,14 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppQuery } from '@/utils/app-query'
 
 import EmptyStatePanel from '@/components/EmptyStatePanel.vue'
 import { getSaleProductDetail } from '@/api/products'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import homeIcon from '@/assets/home.png'
 import cartIcon from '@/assets/cart.svg'
 
@@ -112,6 +120,8 @@ function formatStock (stock) {
 
   return '--'
 }
+
+const shareInfo = { title: '商品详情', path: '', imageUrl: '' }
 
 function normalizeProduct (item) {
   if (!item) {
@@ -144,11 +154,14 @@ export default {
 
   setup () {
     const cartStore = useCartStore()
+    const authStore = useAuthStore()
     const productId = ref('')
     const quantity = ref(1)
     const isSubmitting = ref(false)
     const isAddingToCart = ref(false)
     const routeResolved = ref(false)
+
+    const canDoBusiness = computed(() => authStore.canDoBusiness)
 
     const {
       data: product,
@@ -194,16 +207,55 @@ export default {
     }
 
     function handlePlaceOrder () {
+      if (!authStore.isAuthenticated) {
+        Taro.showModal({
+          title: '提示',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              Taro.navigateTo({ url: '/pages/index/index' })
+            }
+          }
+        })
+        return
+      }
       void handleSelectAddress()
     }
 
     function handleGoToCart () {
+      if (!authStore.isAuthenticated) {
+        Taro.showModal({
+          title: '提示',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              Taro.navigateTo({ url: '/pages/index/index' })
+            }
+          }
+        })
+        return
+      }
       Taro.switchTab({
         url: '/pages/cart/index'
       })
     }
 
     async function handleAddToCart () {
+      if (!authStore.isAuthenticated) {
+        Taro.showModal({
+          title: '提示',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              Taro.navigateTo({ url: '/pages/index/index' })
+            }
+          }
+        })
+        return
+      }
       if (!product.value?.id || isAddingToCart.value) {
         return
       }
@@ -242,6 +294,10 @@ export default {
       })
     }
 
+    function goToSigning () {
+      Taro.navigateTo({ url: '/pages/user/signing-form/index' })
+    }
+
     function handleGoBack () {
       Taro.navigateBack({
         fail: () => {
@@ -264,7 +320,15 @@ export default {
       }
     })
 
+    // 同步分享数据
+    watch([product, productId], () => {
+      shareInfo.title = product.value?.name || '商品详情'
+      shareInfo.path = productId.value ? `/pages/products/detail/index?id=${productId.value}` : ''
+      shareInfo.imageUrl = product.value?.coverImage || ''
+    }, { immediate: true })
+
     return {
+      authStore,
       errorMessage,
       handleGoBack,
       handleDecreaseQuantity,
@@ -284,10 +348,16 @@ export default {
       quantity,
       routeResolved,
       cartTotalCount,
+      canDoBusiness,
+      goToSigning,
       goHome,
       homeIcon,
       cartIcon
     }
+  },
+
+  onShareAppMessage () {
+    return shareInfo
   }
 }
 </script>

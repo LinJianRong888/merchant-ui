@@ -1,14 +1,60 @@
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import Taro from '@tarojs/taro'
 
 import { useAuthStore } from '@/stores/auth'
+import { loginWithWechatMiniapp, MERCHANT_MINIAPP_SLUG } from '@/api/miniapp-auth'
 
 import './app.scss'
+
+async function performSilentLogin () {
+  if (authStore.isAuthenticated) {
+    console.log('[silent-login] 已登录，跳过')
+    return
+  }
+
+  // 如果已有静默 token，跳过
+  const existingSilentToken = Taro.getStorageSync('silent_token')
+  if (existingSilentToken) {
+    console.log('[silent-login] 已有静默 token，跳过')
+    return
+  }
+
+  try {
+    console.log('[silent-login] 开始获取静默 token...')
+    const loginRes = await Taro.login()
+
+    if (!loginRes.code) {
+      console.warn('[silent-login] Taro.login 未返回 code')
+      return
+    }
+
+    const response = await loginWithWechatMiniapp({
+      code: loginRes.code,
+      appSlug: MERCHANT_MINIAPP_SLUG
+    })
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      const token = response.data?.access || ''
+      if (token) {
+        // 只存为静默 token，不写入 authStore，用户保持未登录状态
+        Taro.setStorageSync('silent_token', token)
+        authStore.notifySilentTokenReady()
+        console.log('[silent-login] 静默 token 已存储')
+      }
+    } else {
+      console.warn('[silent-login] 后端返回非成功状态', response.statusCode)
+    }
+  } catch (error) {
+    console.warn('[silent-login] 静默 token 获取失败', error?.message || error)
+  }
+}
 
 const App = createApp({
   onLaunch () {
     console.log('App launched.')
+    void performSilentLogin()
   },
   onShow (options) {
     console.log('App onShow.')
