@@ -6,78 +6,101 @@
   padding-bottom: 140rpx;
 }
 
-.nav-bar {
+/* ---- 搜索栏 ---- */
+.search-bar {
   position: sticky;
   top: 0;
   z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 80rpx 32rpx 24rpx;
-  background: $color-bg-white;
+  background: linear-gradient(180deg, #fff 0%, #fff 100%);
+  padding: 88rpx 32rpx 24rpx;
 }
 
-.nav-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: $color-text-primary;
-}
-
-.nav-more {
-  width: 80rpx;
-  height: 64rpx;
+.search-input-wrapper {
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  background: #F5F5F5;
+  border-radius: 48rpx;
+  padding: 20rpx 32rpx;
+  margin-right: 16rpx;
 }
 
-.nav-more-text {
+.nav-clear {
+  flex-shrink: 0;
+}
+
+.nav-clear-text {
   font-size: 28rpx;
-  color: $color-text-secondary;
+  color: #666;
+}
+
+.search-icon {
+  position: relative;
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.search-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24rpx;
+  height: 24rpx;
+  border: 3rpx solid #999;
+  border-radius: 50%;
+}
+
+.search-icon::after {
+  content: '';
+  position: absolute;
+  top: 22rpx;
+  left: 22rpx;
+  width: 3rpx;
+  height: 16rpx;
+  background: #999;
+  transform: rotate(-45deg);
+  transform-origin: top;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.search-placeholder {
+  color: #999;
 }
 
 /* 未登录提示 */
 .login-notice {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 0 24rpx 16rpx;
   display: flex;
   align-items: center;
-  margin: 0 24rpx 16rpx;
-  padding: 20rpx 24rpx;
-  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
-  border-radius: 16rpx;
-  border: 1rpx solid #93c5fd;
+  justify-content: space-between;
 }
 
-.login-notice__icon {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 18rpx;
-  background: #3b82f6;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.login-notice__icon::before {
-  content: '!';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
+.login-notice-text {
   font-size: 24rpx;
-  font-weight: 700;
-}
-
-.login-notice__text {
+  color: #fff;
+  font-weight: 500;
+  line-height: 1.5;
   flex: 1;
-  font-size: 26rpx;
-  color: #1e40af;
-  margin-left: 16rpx;
 }
 
-.login-notice__arrow {
-  font-size: 28rpx;
-  color: #2563eb;
-  flex-shrink: 0;
+.login-notice-arrow {
+  font-size: 32rpx;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 300;
+  margin-left: 12rpx;
 }
 
 .loading-view {

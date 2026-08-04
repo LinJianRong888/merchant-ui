@@ -1,21 +1,24 @@
 <template>
   <view class="products-page">
-    <view class="page-header">
-      <text class="page-title">商品</text>
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <view class="search-input-wrapper">
+        <view class="search-icon"></view>
+        <input
+          class="search-input"
+          placeholder="请输入商品搜索"
+          placeholder-class="search-placeholder"
+          :value="searchQuery"
+          @input="onSearchInput"
+        />
+      </view>
     </view>
 
-    <!-- 未签署协议提示 -->
-    <view v-if="authStore.isAuthenticated && !authStore.canDoBusiness" class="sign-notice" @tap="goToSigning">
-      <view class="sign-notice__icon"></view>
-      <text class="sign-notice__text">您还未签署合作协议，签署后方可下单</text>
-      <text class="sign-notice__arrow">›</text>
-    </view>
-
+    <view class="products-content">
     <!-- 未登录提示 -->
-    <view v-if="!authStore.isAuthenticated" class="sign-notice sign-notice--login" @tap="handleLoginPrompt">
-      <view class="sign-notice__icon sign-notice__icon--login"></view>
-      <text class="sign-notice__text">您还未登录，登录后方可下单</text>
-      <text class="sign-notice__arrow">›</text>
+    <view v-if="!authStore.isAuthenticated" class="login-notice" @tap="handleLoginPrompt">
+      <text class="login-notice-text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice-arrow">›</text>
     </view>
 
     <view v-if="isLoading" class="product-skeleton-list">
@@ -35,12 +38,12 @@
       <button class="state-panel__button" :loading="isFetching" @tap="handleRetry">重试</button>
     </view>
 
-    <view v-else-if="!products.length && authStore.isAuthenticated" class="state-panel state-panel--empty">
+    <view v-else-if="!filteredProducts.length && authStore.isAuthenticated" class="state-panel state-panel--empty">
       <text class="state-panel__title">暂无商品</text>
       <text class="state-panel__desc">当前没有可售商品</text>
     </view>
 
-    <view v-else-if="!products.length" class="product-skeleton-list">
+    <view v-else-if="!filteredProducts.length" class="product-skeleton-list">
       <view v-for="item in skeletonItems" :key="item" class="product-card product-card--skeleton">
         <view class="product-card__media product-card__media--skeleton"></view>
         <view class="product-card__body">
@@ -52,7 +55,7 @@
     </view>
 
     <view v-else class="product-list">
-      <view v-for="product in products" :key="product.profile_id || product.id" class="product-card" @tap="handleOpenDetail(product.id)">
+      <view v-for="product in filteredProducts" :key="product.profile_id || product.id" class="product-card" @tap="handleOpenDetail(product)">
         <view class="product-card__media">
           <image
             v-if="product.coverImage"
@@ -63,6 +66,7 @@
           <view v-else class="product-card__placeholder">
             <text class="product-card__placeholder-text">{{ product.placeholderText }}</text>
           </view>
+          <view v-if="Number(product.stock) <= 0" class="product-card__soldout">售罄</view>
         </view>
 
         <view class="product-card__body">
@@ -88,11 +92,12 @@
         </view>
       </view>
     </view>
+    </view>
   </view>
 </template>
 
 <script>
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useAppQuery } from '@/utils/app-query'
 
@@ -102,7 +107,6 @@ import { useAuthStore } from '@/stores/auth'
 import './index.scss'
 
 const PRODUCT_DETAIL_PAGE = '/pages/products/detail/index'
-const SIGNING_PAGE = '/pages/user/signing-form/index'
 
 function formatPrice (price) {
   const value = Number(price)
@@ -122,7 +126,6 @@ function formatStock (stock) {
 
 function normalizeProducts (items) {
   return items
-    .filter((item) => item?.is_available)
     .map((item) => ({
       ...item,
       coverImage: item.image || item.product_image || '',
@@ -146,6 +149,7 @@ export default {
     const skeletonItems = ['skeleton-1', 'skeleton-2', 'skeleton-3']
     const fallbackProducts = ref([])
     const fallbackError = ref(null)
+    const searchQuery = ref('')
 
     const {
       data: products,
@@ -156,12 +160,25 @@ export default {
       refetch
     } = useAppQuery({
       queryKey: ['products', 'list'],
-      queryFn: async () => normalizeProducts(await listSaleProducts())
+      queryFn: async () => normalizeProducts(await listSaleProducts()),
+      enabled: computed(() => authStore.isAuthenticated || authStore.silentTokenVersion > 0)
     })
 
     const productList = computed(() => products.value || fallbackProducts.value)
     const hasError = computed(() => isError.value || Boolean(fallbackError.value))
     const errorMessage = computed(() => formatQueryError(fallbackError.value || error.value))
+
+    const filteredProducts = computed(() => {
+      const query = searchQuery.value.trim()
+      if (!query) return productList.value
+      return productList.value.filter(p =>
+        (p.name || '').toLowerCase().includes(query.toLowerCase())
+      )
+    })
+
+    function onSearchInput (e) {
+      searchQuery.value = e.detail?.value || ''
+    }
 
     async function loadProductsDirect () {
       console.info('[products-page] fallback load start')
@@ -197,14 +214,10 @@ export default {
       await refreshProducts()
     }
 
-    async function handleOpenDetail (productId) {
+    async function handleOpenDetail (product) {
       await Taro.navigateTo({
-        url: `${PRODUCT_DETAIL_PAGE}?id=${productId}`
+        url: `${PRODUCT_DETAIL_PAGE}?id=${product.id}`
       })
-    }
-
-    function goToSigning () {
-      Taro.navigateTo({ url: SIGNING_PAGE })
     }
 
     function handleLoginPrompt () {
@@ -233,28 +246,18 @@ export default {
       }
     })
 
-    // 监听静默 token 就绪，自动重试加载
-    watch(
-      () => authStore.silentTokenVersion,
-      (version) => {
-        if (version > 0 && !authStore.isAuthenticated && !products.value?.length) {
-          console.log('[products-page] 检测到静默 token 就绪，重试加载商品')
-          void refreshProducts()
-        }
-      }
-    )
-
     return {
       authStore,
       errorMessage,
+      filteredProducts,
       handleRetry,
       handleOpenDetail,
-      goToSigning,
       handleLoginPrompt,
       isError: hasError,
       isFetching,
       isLoading,
-      products: productList,
+      onSearchInput,
+      searchQuery,
       skeletonItems
     }
   },

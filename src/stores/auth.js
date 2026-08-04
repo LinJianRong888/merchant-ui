@@ -59,6 +59,9 @@ export const useAuthStore = defineStore('auth', {
       const refreshToken = Taro.getStorageSync('refresh_token') || ''
       const session = Taro.getStorageSync(SESSION_STORAGE_KEY) || {}
 
+      // 记录当前 hasAgent，session 存在时保持旧值避免页面闪烁
+      const prevHasAgent = this.hasAgent
+
       this.$patch({
         ...createDefaultState(),
         ...session,
@@ -66,9 +69,13 @@ export const useAuthStore = defineStore('auth', {
         refreshToken,
         appSlug: session.appSlug || MERCHANT_MINIAPP_SLUG,
         canDoBusiness: false, // 不持久化，始终以后端为准
-        esignCooperationSigned: false, // 不持久化，始终以后端为准
-        hasAgent: false // 不持久化，始终以后端为准
+        esignCooperationSigned: false // 不持久化，始终以后端为准
       })
+
+      // 如果有 session，恢复 hasAgent 旧值，等 syncCanDoBusiness 异步更新
+      if (accessToken && prevHasAgent) {
+        this.hasAgent = true
+      }
     },
 
     /**
@@ -143,7 +150,6 @@ export const useAuthStore = defineStore('auth', {
     clearSession () {
       this.$patch(createDefaultState())
       clearPersistedSession()
-      Taro.removeStorageSync('silent_token')
     },
 
     notifySilentTokenReady () {

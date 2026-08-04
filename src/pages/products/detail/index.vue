@@ -24,13 +24,6 @@
     </view>
 
     <view v-else-if="product" class="product-detail-shell">
-      <!-- 未签署协议提示 -->
-      <view v-if="authStore.isAuthenticated && !canDoBusiness" class="detail-sign-notice" @tap="goToSigning">
-        <view class="detail-sign-notice__icon"></view>
-        <text class="detail-sign-notice__text">您还未签署合作协议，签署后方可下单</text>
-        <text class="detail-sign-notice__arrow">›</text>
-      </view>
-
       <view class="product-image-wrap">
         <image v-if="product.coverImage" class="product-image" :src="product.coverImage" mode="widthFix" />
         <view v-else class="product-image product-image--empty">
@@ -41,28 +34,22 @@
       <view class="product-info">
         <view class="product-price-row">
           <text class="product-price">{{ product.displayPrice }}</text>
-          <text class="product-origin-price">¥{{ (product.price || 299) * 1.5 }}</text>
+          <text class="product-stock">库存 {{ product.stock || 0 }}</text>
         </view>
         <view class="product-name-row">
           <text class="product-name">{{ product.name }}</text>
-          <text class="product-index">1/1</text>
         </view>
-        <text class="product-tag"> </text>
+        <view class="product-meta-row">
+          <text v-if="product.category_name || product.category" class="product-chip">{{ product.category_name || product.category }}</text>
+          <text v-if="product.specification" class="product-chip">{{ product.specification }}</text>
+        </view>
       </view>
 
       <view class="product-specs">
         <text class="specs-title">商品详情</text>
-        <view class="spec-item">
-          <text class="spec-label">规格</text>
-          <text class="spec-value">{{ product.specification || '-' }}</text>
-        </view>
-        <view class="spec-item">
-          <text class="spec-label">包装</text>
-          <text class="spec-value">{{ product.packaging || '-' }}</text>
-        </view>
-        <view class="spec-item">
-          <text class="spec-label">保质期</text>
-          <text class="spec-value">{{ product.shelf_life || '-' }}</text>
+        <view class="spec-item" v-for="spec in dynamicSpecs" :key="spec.label">
+          <text class="spec-label">{{ spec.label }}</text>
+          <text class="spec-value">{{ spec.value }}</text>
         </view>
       </view>
 
@@ -79,8 +66,8 @@
           </view>
         </view>
         <view class="bottom-right">
-          <button class="btn-add-cart" :loading="isAddingToCart" @tap="handleAddToCart">加入购物车</button>
-          <button class="btn-buy-now" :loading="isSubmitting" @tap="handlePlaceOrder">立即购买</button>
+          <button class="btn-add-cart" :class="{ 'btn--disabled': isOutOfStock }" :loading="isAddingToCart" :disabled="isOutOfStock" @tap="handleAddToCart">{{ isOutOfStock ? '暂无库存' : '加入购物车' }}</button>
+          <button class="btn-buy-now" :class="{ 'btn--disabled': isOutOfStock }" :loading="isSubmitting" :disabled="isOutOfStock" @tap="handlePlaceOrder">{{ isOutOfStock ? '暂无库存' : '立即购买' }}</button>
         </view>
       </view>
     </view>
@@ -161,8 +148,6 @@ export default {
     const isAddingToCart = ref(false)
     const routeResolved = ref(false)
 
-    const canDoBusiness = computed(() => authStore.canDoBusiness)
-
     const {
       data: product,
       isLoading,
@@ -189,6 +174,49 @@ export default {
     })
 
     const cartTotalCount = computed(() => cartStore.cartTotalCount)
+    const isOutOfStock = computed(() => Number(product.value?.stock) <= 0)
+
+    // 动态规格：字段名 → 中文标签
+    const specLabelMap = {
+      specification: '规格',
+      packaging: '包装方式',
+      package_type: '包装方式',
+      shelf_life: '保质期',
+      expiration: '保质期',
+      net_content: '净含量',
+      net_weight: '净含量',
+      weight: '重量',
+      volume: '体积',
+      origin: '产地',
+      brand: '品牌',
+      manufacturer: '生产厂家',
+      storage: '储存方式',
+      production_date: '生产日期',
+      material: '材质',
+      size: '尺寸',
+      color: '颜色',
+      flavor: '口味',
+      ingredients: '配料',
+      usage: '使用方法',
+      note: '注意事项',
+      description: '商品描述'
+    }
+
+    const excludeSpecFields = ['id', 'profile_id', 'name', 'price', 'image', 'product_image', 'image_url', 'coverImage', 'created_at', 'updated_at', 'stock', 'category_name', 'category', 'placeholderText', 'displayPrice', 'displayStock']
+
+    const dynamicSpecs = computed(() => {
+      if (!product.value) return []
+      const specs = []
+      Object.keys(product.value).forEach(key => {
+        if (excludeSpecFields.includes(key)) return
+        const label = specLabelMap[key]
+        if (!label) return
+        const value = product.value[key]
+        if (value === null || value === undefined || value === '') return
+        specs.push({ label, value: String(value) })
+      })
+      return specs
+    })
 
     async function handleSelectAddress () {
       if (!product.value?.id || isSubmitting.value) {
@@ -218,6 +246,10 @@ export default {
             }
           }
         })
+        return
+      }
+      if (isOutOfStock.value) {
+        Taro.showToast({ title: '暂无库存，等待补货', icon: 'none' })
         return
       }
       void handleSelectAddress()
@@ -254,6 +286,10 @@ export default {
             }
           }
         })
+        return
+      }
+      if (isOutOfStock.value) {
+        Taro.showToast({ title: '暂无库存，等待补货', icon: 'none' })
         return
       }
       if (!product.value?.id || isAddingToCart.value) {
@@ -294,10 +330,6 @@ export default {
       })
     }
 
-    function goToSigning () {
-      Taro.navigateTo({ url: '/pages/user/signing-form/index' })
-    }
-
     function handleGoBack () {
       Taro.navigateBack({
         fail: () => {
@@ -328,7 +360,6 @@ export default {
     }, { immediate: true })
 
     return {
-      authStore,
       errorMessage,
       handleGoBack,
       handleDecreaseQuantity,
@@ -342,14 +373,14 @@ export default {
       isLoading,
       isSubmitting,
       isAddingToCart,
+      isOutOfStock,
+      dynamicSpecs,
       refetch,
       orderAmountText,
       product,
       quantity,
       routeResolved,
       cartTotalCount,
-      canDoBusiness,
-      goToSigning,
       goHome,
       homeIcon,
       cartIcon

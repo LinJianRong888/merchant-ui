@@ -55,15 +55,19 @@
 
     <!-- 未登录提示 -->
     <view v-if="!searchQuery.trim() && !authStore.isAuthenticated" class="login-notice" @tap="handleLoginPrompt">
-      <view class="login-notice__icon"></view>
-      <text class="login-notice__text">您还未登录，登录后方可使用更多功能</text>
-      <text class="login-notice__arrow">›</text>
+      <text class="login-notice-text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice-arrow">›</text>
     </view>
 
     <!-- 轮播图 -->
     <swiper v-if="!searchQuery.trim() && banners.length" class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500">
-      <swiper-item v-for="item in banners" :key="item.id">
-        <image class="banner-image" :src="item.image" mode="aspectFill" />
+      <swiper-item v-for="item in banners" :key="item.id" @tap="handleProductDetail(item.id)">
+        <view class="banner-slide">
+          <image class="banner-image" :src="item.image" mode="aspectFill" />
+          <view class="banner-info-bar">
+            <text class="banner-stock">库存 {{ item.stock }}</text>
+          </view>
+        </view>
       </swiper-item>
     </swiper>
 
@@ -109,7 +113,7 @@
 
 <script>
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { listSaleProducts } from '@/api/products'
@@ -127,7 +131,6 @@ function formatPrice (price) {
 
 function normalizeProducts (items) {
   return items
-    .filter((item) => item?.is_available)
     .map((item) => ({
       ...item,
       coverImage: item.image || item.product_image || '',
@@ -164,7 +167,8 @@ export default {
       refetch
     } = useAppQuery({
       queryKey: ['products', 'home'],
-      queryFn: async () => normalizeProducts(await listSaleProducts())
+      queryFn: async () => normalizeProducts(await listSaleProducts()),
+      enabled: computed(() => authStore.isAuthenticated || authStore.silentTokenVersion > 0)
     })
 
     const productList = computed(() => products.value || fallbackProducts.value)
@@ -193,11 +197,11 @@ export default {
 
     const banners = computed(() => productList.value
       .filter((item) => item.coverImage)
-      .slice(0, 3)
       .map((item) => ({
         id: item.profile_id || item.id,
         image: item.coverImage,
-        name: item.name
+        name: item.name,
+        stock: item.displayStock
       })))
 
     // 搜索匹配的商品
@@ -247,17 +251,6 @@ export default {
         Taro.stopPullDownRefresh()
       }
     })
-
-    // 监听静默 token 就绪，自动重试加载
-    watch(
-      () => authStore.silentTokenVersion,
-      (version) => {
-        if (version > 0 && !authStore.isAuthenticated && !productList.value?.length) {
-          console.log('[home-page] 检测到静默 token 就绪，重试加载商品')
-          void refreshProducts()
-        }
-      }
-    )
 
     return {
       authStore,

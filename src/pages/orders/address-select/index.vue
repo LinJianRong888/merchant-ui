@@ -454,27 +454,6 @@ export default {
         return
       }
 
-      // 检查签署状态（从 authStore 读取，值已在启动时与后端核对）
-      if (!authStore.esignCooperationSigned) {
-        isSubmitting.value = false
-        Taro.showModal({
-          title: '签署合作协议',
-          content: '您需要先签署合作协议后才能下单，是否前往签署？',
-          success: (modalRes) => {
-            if (modalRes.confirm) {
-              Taro.navigateTo({ url: '/pages/user/signing-form/index' })
-            }
-          }
-        })
-        return
-      }
-
-      if (!authStore.canDoBusiness) {
-        isSubmitting.value = false
-        Taro.showToast({ title: '需要等待验证后再下单', icon: 'none', duration: 3000 })
-        return
-      }
-
       isSubmitting.value = true
 
       try {
@@ -504,9 +483,11 @@ export default {
         await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
       } catch (error) {
         console.error('[order-confirm] order creation failed', error)
-        Taro.showToast({ title: error?.message || '订单创建失败', icon: 'none' })
-
-        await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
+        Taro.showModal({
+          title: '下单失败',
+          content: error?.message || '订单创建失败',
+          showCancel: false
+        })
       } finally {
         isSubmitting.value = false
       }

@@ -3,7 +3,8 @@
 .product-detail-page {
   min-height: 100vh;
   background: #F5F5F5;
-  padding-bottom: 120rpx;
+  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+  overflow-y: auto;
 }
 
 .product-detail-shell {
@@ -52,38 +53,34 @@
   color: $color-danger;
 }
 
-.product-origin-price {
-  font-size: 28rpx;
+.product-stock {
+  font-size: 24rpx;
   color: $color-text-muted;
-  text-decoration: line-through;
 }
 
 .product-name-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16rpx;
+  margin-top: 14rpx;
 }
 
 .product-name {
   font-size: 32rpx;
   font-weight: bold;
   color: $color-text-primary;
-  flex: 1;
 }
 
-.product-index {
-  font-size: 24rpx;
-  color: $color-text-muted;
+.product-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 14rpx;
 }
 
-.product-tag {
+.product-chip {
   display: inline-block;
-  margin-top: 16rpx;
   padding: 8rpx 16rpx;
-  background-color: $color-bg-primary-tint;
-  color: $color-primary;
-  font-size: 24rpx;
+  background: #eff6ff;
+  color: #3b82f6;
+  font-size: 22rpx;
   border-radius: 8rpx;
 }
 
@@ -225,6 +222,19 @@
 
 .btn-buy-now::after {
   border: none;
+}
+
+.btn--disabled {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.btn-add-cart.btn--disabled,
+.btn-buy-now.btn--disabled {
+  background: #e2e8f0;
+  box-shadow: none;
+  color: #94a3b8;
+  border-color: #e2e8f0;
 }
 
 /* ---- 未签署协议 ---- */

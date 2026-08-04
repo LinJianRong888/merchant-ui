@@ -19,7 +19,8 @@
         :class="{ 'login-button--disabled': !agreedToTerms }"
         :loading="isSubmitting"
         :disabled="!agreedToTerms"
-        @tap="handleWechatLogin"
+        open-type="getPhoneNumber"
+        @getphonenumber="handleWechatLogin"
       >
         <view class="login-button__inner">
           <text class="login-button__icon">💬</text>
@@ -35,6 +36,8 @@
           <text class="agreement-text">已阅读并同意</text>
         </view>
         <text class="agreement-link" @tap="handleViewAgreement">《用户服务协议》</text>
+        <text class="agreement-text">和</text>
+        <text class="agreement-link" @tap="handleViewMerchantAgreement">《商户授权合作协议》</text>
       </view>
     </view>
   </view>
@@ -44,7 +47,7 @@
 import { computed, ref } from 'vue'
 import Taro, { useDidShow } from '@tarojs/taro'
 
-import { loginWithWechatMiniapp, MERCHANT_MINIAPP_SLUG } from '@/api/miniapp-auth'
+import { loginWithWechatMiniapp, fetchWechatPhoneNumber, MERCHANT_MINIAPP_SLUG } from '@/api/miniapp-auth'
 import { useAuthStore } from '@/stores/auth'
 
 import logoImg from '@/assets/logo.png'
@@ -66,7 +69,7 @@ export default {
         return '登录中'
       }
 
-      return isAuthenticated.value ? '重新登录' : '微信一键登录'
+      return isAuthenticated.value ? '重新登录' : '手机号快捷登录'
     })
 
     async function redirectToHome () {
@@ -85,7 +88,7 @@ export default {
       }
     }
 
-    async function handleWechatLogin () {
+    async function handleWechatLogin (e) {
       if (isSubmitting.value) {
         return
       }
@@ -98,6 +101,7 @@ export default {
       isSubmitting.value = true
 
       try {
+        // 1. 微信登录获取 code
         let loginRes
 
         try {
@@ -110,6 +114,7 @@ export default {
           throw new Error(loginRes.errMsg || 'Taro.login 未返回 code')
         }
 
+        // 2. 调用登录接口
         let response
 
         try {
@@ -124,21 +129,35 @@ export default {
           ].join('\n'))
         }
 
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          authStore.setSession(response.data || {})
-
-          Taro.showToast({
-            title: '登录成功',
-            icon: 'success'
-          })
-          await redirectToHome()
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          Taro.showToast({ title: '登录失败', icon: 'none' })
           return
         }
 
-        Taro.showToast({
-          title: '登录失败',
-          icon: 'none'
-        })
+        authStore.setSession(response.data || {})
+
+        // 3. 绑定手机号（微信手机号授权）
+        const phoneCode = e?.detail?.code
+        if (phoneCode) {
+          try {
+            const phoneResponse = await fetchWechatPhoneNumber({
+              code: phoneCode,
+              updateProfilePhone: true
+            })
+
+            if (phoneResponse.statusCode >= 200 && phoneResponse.statusCode < 300 && phoneResponse.data?.phone_number) {
+              authStore.setPhoneNumber(phoneResponse.data)
+              console.log('[login] 手机号绑定成功')
+            } else {
+              console.warn('[login] 手机号绑定失败:', phoneResponse.statusCode)
+            }
+          } catch (phoneErr) {
+            console.warn('[login] 手机号绑定异常:', phoneErr?.message || phoneErr)
+          }
+        }
+
+        Taro.showToast({ title: '登录成功', icon: 'success' })
+        await redirectToHome()
       } catch (error) {
         Taro.showToast({
           title: error?.message || '登录异常',
@@ -159,6 +178,12 @@ export default {
       })
     }
 
+    function handleViewMerchantAgreement () {
+      Taro.navigateTo({
+        url: '/pages/user/merchant-agreement/index'
+      })
+    }
+
     useDidShow(() => {
       authStore.hydrate()
 
@@ -175,7 +200,8 @@ export default {
       primaryButtonText,
       agreedToTerms,
       toggleAgreement,
-      handleViewAgreement
+      handleViewAgreement,
+      handleViewMerchantAgreement
     }
   },
 

@@ -1,5 +1,24 @@
 <template>
   <view class="user-page">
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <view class="search-input-wrapper">
+        <view class="search-icon"></view>
+        <input
+          class="search-input"
+          placeholder="请输入商品搜索"
+          placeholder-class="search-placeholder"
+          @tap="handleSearchTap"
+        />
+      </view>
+    </view>
+
+    <!-- 未登录提示 -->
+    <view v-if="!isLoggedIn" class="login-notice" @tap="goToLogin">
+      <text class="login-notice-text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice-arrow">›</text>
+    </view>
+
     <view class="user-header">
       <view class="user-card">
         <button
@@ -60,6 +79,19 @@
               <text class="phone-icon">&#9743;</text>
               <text class="user-phone" v-if="profilePhone">{{ maskPhone(profilePhone) }}</text>
               <text class="user-phone" v-else>未绑定</text>
+              <button
+                v-if="isEditingPhone"
+                class="phone-bind-btn"
+                open-type="getPhoneNumber"
+                @getphonenumber="handleGetPhoneNumber"
+              >
+                授权绑定
+              </button>
+              <text
+                v-else
+                class="phone-edit-text"
+                @tap="isEditingPhone = true"
+              >{{ profilePhone ? '修改' : '绑定' }}</text>
             </view>
           </template>
           <text v-else class="login-hint" @tap="goToLogin">点击登录</text>
@@ -74,7 +106,7 @@
       </view>
 
       <!-- 底部地址栏 -->
-      <view class="address-bar">
+      <view v-if="isLoggedIn" class="address-bar">
         <view class="address-left">
           <text class="address-icon">&#9678;</text>
           <text class="address-text">{{ defaultAddress }}</text>
@@ -82,14 +114,7 @@
       </view>
     </view>
 
-    <!-- 未登录提示 -->
-    <view v-if="!isLoggedIn" class="login-notice" @tap="goToLogin">
-      <view class="login-notice__icon"></view>
-      <text class="login-notice__text">您还未登录，登录后方可使用更多功能</text>
-      <text class="login-notice__arrow">›</text>
-    </view>
-
-    <view class="order-section">
+    <view v-if="isLoggedIn" class="order-section">
       <view class="order-header">
         <text class="order-title">我的订单</text>
         <view class="order-more" @tap="goToOrders('all')">
@@ -152,7 +177,7 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-      <view class="menu-item" @tap="goToCustomerService">
+      <view v-if="isLoggedIn" class="menu-item" @tap="goToCustomerService">
         <view class="menu-left">
           <view class="menu-icon kefu-icon"></view>
           <text class="menu-text">联系客服</text>
@@ -165,13 +190,6 @@
           <text class="menu-text" :class="{ 'menu-text--muted': inviteBound || hasAgent }">{{ inviteBound || hasAgent ? '已绑定邀请码' : '填写邀请码' }}</text>
         </view>
         <text class="menu-arrow" :class="{ 'menu-arrow--muted': inviteBound || hasAgent }">›</text>
-      </view>
-      <view v-if="isLoggedIn" class="menu-item menu-item--sign" @tap="handleSignTap">
-        <view class="menu-left">
-          <view class="sign-status-dot" :class="signStatusClass"></view>
-          <text class="menu-text" :class="{ 'menu-text--danger': !canDoBusiness && !hasSigned }">{{ signingLabel }}</text>
-        </view>
-        <text class="menu-arrow" :class="{ 'menu-arrow--danger': !canDoBusiness && !hasSigned }">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @tap="handleLogout">
         <view class="menu-left">
@@ -212,13 +230,13 @@
 
 <script>
 import Taro, { useDidShow } from '@tarojs/taro'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppQuery } from '@/utils/app-query'
 import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser, updateCurrentUser, uploadAvatar } from '@/api/users'
+import { fetchWechatPhoneNumber, loginWithWechatMiniapp, MERCHANT_MINIAPP_SLUG } from '@/api/miniapp-auth'
 import { listOrders } from '@/api/orders'
 import { listUserAddresses } from '@/api/user-addresses'
-import { getSigningStatus } from '@/api/esign'
 import { bindInviteCode } from '@/api/invitation'
 import './index.scss'
 
@@ -268,6 +286,7 @@ export default {
     const localNickname = ref(Taro.getStorageSync(STORAGE_NICKNAME_KEY) || '')
     const isEditingNickname = ref(false)
     const editName = ref('')
+    const isEditingPhone = ref(false)
 
     function startEditNickname () {
       editName.value = ''
@@ -393,63 +412,10 @@ export default {
         || '用户'
     })
 
-    // ---- 签约 ----
-    // can_do_business 统一从 authStore 读取（默认 false，启动时与后端核对）
-    const canDoBusiness = computed(() => authStore.canDoBusiness)
+    // hasAgent 统一从 authStore 读取（由 syncCanDoBusiness 同步）
     const hasAgent = computed(() => authStore.hasAgent)
 
     const userType = computed(() => userInfo.value?.user_type || 'customer')
-
-    // 签约详情（agent 和 customer 分别走对应接口）
-    const {
-      data: signingInfo,
-      refetch: refetchSigningStatus
-    } = useAppQuery({
-      queryKey: ['esign', 'signing', 'status', userType],
-      queryFn: () => getSigningStatus(userType.value || 'customer'),
-      enabled: computed(() => authStore.isAuthenticated)
-    })
-
-    // signingInfo 加载后同步到 authStore（不持久化，始终以后端为准）
-    watch(signingInfo, (info) => {
-      if (info && typeof info.can_do_business === 'boolean') {
-        authStore.canDoBusiness = info.can_do_business
-        authStore.esignCooperationSigned = !!info.esign_cooperation_signed
-        authStore.hasAgent = info.can_do_business || (info.business_eligibility_reason !== 'customer_agent_not_assigned')
-      }
-    }, { immediate: true })
-
-    // 是否已签署完成（不论 can_do_business，但不包含 needs_resign 的情况）
-    const hasSigned = computed(() => {
-      const info = signingInfo.value
-      if (info?.needs_resign) return false
-      return !!(info?.esign_cooperation_signed || info?.status === 'completed')
-    })
-
-    const signStatusClass = computed(() => {
-      if (signingInfo.value?.needs_resign) return 'dot--red'
-      if (canDoBusiness.value || hasSigned.value) return 'dot--green'
-      if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return 'dot--yellow'
-      return 'dot--gray'
-    })
-
-    const signingLabel = computed(() => {
-      if (signingInfo.value?.needs_resign) return '需重新签署协议'
-      if (canDoBusiness.value || hasSigned.value) return '合作协议已签署'
-      if (signingInfo.value?.status === 'pending' || signingInfo.value?.status === 'partially_signed') return '签署进行中'
-      return '签署合作协议'
-    })
-
-    async function handleSignTap () {
-      // 已签署：提示无需操作
-      if (canDoBusiness.value || hasSigned.value) {
-        Taro.showToast({ title: '已完成签署', icon: 'none' })
-        return
-      }
-      // 跳转到签署表单页，收集姓名和手机号
-      const type = userType.value || 'customer'
-      Taro.navigateTo({ url: `/pages/user/signing-form/index?userType=${type}` })
-    }
 
     // 地址：优先后端 profile.address，其次取收货地址
     const defaultAddress = ref('')
@@ -478,17 +444,18 @@ export default {
     }
 
     // ---- 生命周期 ----
-    useDidShow(() => {
+    useDidShow(async () => {
       authStore.hydrate()
-      // 启动时与后端核对 can_do_business
-      authStore.syncCanDoBusiness()
+      // 启动时与后端核对 can_do_business（await 避免闪烁）
+      await authStore.syncCanDoBusiness()
+      // 刷新本地邀请码绑定状态
+      inviteBound.value = Taro.getStorageSync(INVITE_BOUND_KEY) || false
       // 刷新本地头像
       avatarUrl.value = Taro.getStorageSync(STORAGE_AVATAR_KEY) || ''
       // 如果已登录，刷新后端用户信息和签署状态
       if (authStore.isAuthenticated) {
         refetchUser()
         updateDisplayAddress()
-        void refetchSigningStatus()
       }
     })
 
@@ -533,7 +500,6 @@ export default {
           Taro.setStorageSync(INVITE_BOUND_KEY, true)
           // 刷新签署状态（邀请码可能影响 can_do_business）
           authStore.syncCanDoBusiness()
-          void refetchSigningStatus()
         } else {
           const msg = friendInviteError(res.data?.detail)
           Taro.showToast({ title: msg, icon: 'none' })
@@ -549,14 +515,80 @@ export default {
 
     // ---- 导航 ----
     function goToLogin() {
-      Taro.navigateTo({ url: LOGIN_PAGE })
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再使用此功能',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: LOGIN_PAGE })
+          }
+        }
+      })
+    }
+
+    async function handleGetPhoneNumber (e) {
+      const phoneCode = e?.detail?.code
+      if (!phoneCode) {
+        isEditingPhone.value = false
+        Taro.showToast({ title: '未获取到手机号授权', icon: 'none' })
+        return
+      }
+
+      try {
+        const response = await fetchWechatPhoneNumber({
+          code: phoneCode,
+          updateProfilePhone: true
+        })
+
+        if (response.statusCode >= 200 && response.statusCode < 300 && response.data?.phone_number) {
+          authStore.setPhoneNumber(response.data)
+          isEditingPhone.value = false
+          Taro.showToast({ title: '手机号已更新', icon: 'success', duration: 1200 })
+          // 刷新用户信息以更新 profilePhone
+          void refetchUser()
+        } else {
+          isEditingPhone.value = false
+          Taro.showToast({ title: response.data?.detail || '手机号更新失败', icon: 'none' })
+        }
+      } catch (err) {
+        console.error('[user] phone bind failed:', err)
+        isEditingPhone.value = false
+        Taro.showToast({ title: '手机号更新失败，请重试', icon: 'none' })
+      }
     }
 
     function goToAddresses() {
+      if (!isLoggedIn.value) {
+        Taro.showModal({
+          title: '提示',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              Taro.navigateTo({ url: '/pages/index/index' })
+            }
+          }
+        })
+        return
+      }
       Taro.navigateTo({ url: ADDRESSES_PAGE })
     }
 
     function goToOrders(tab) {
+      if (!isLoggedIn.value) {
+        Taro.showModal({
+          title: '提示',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              Taro.navigateTo({ url: '/pages/index/index' })
+            }
+          }
+        })
+        return
+      }
       Taro.navigateTo({ url: `${ORDERS_PAGE}?tab=${tab || 'all'}` })
     }
 
@@ -564,10 +596,31 @@ export default {
       Taro.showModal({
         title: '退出登录',
         content: '确认退出当前账号吗？',
-        success: (result) => {
+        success: async (result) => {
           if (!result.confirm) return
           authStore.clearSession()
-          void Taro.reLaunch({ url: LOGIN_PAGE })
+
+          // 退出后获取静默 token，确保商品可加载
+          try {
+            const loginRes = await Taro.login()
+            if (loginRes.code) {
+              const response = await loginWithWechatMiniapp({
+                code: loginRes.code,
+                appSlug: MERCHANT_MINIAPP_SLUG
+              })
+              if (response.statusCode >= 200 && response.statusCode < 300) {
+                const token = response.data?.access || ''
+                if (token) {
+                  Taro.setStorageSync('silent_token', token)
+                  authStore.notifySilentTokenReady()
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('[logout] 静默 token 获取失败', e?.message || e)
+          }
+
+          void Taro.switchTab({ url: '/pages/home/index' })
         }
       })
     }
@@ -593,18 +646,15 @@ export default {
       editName,
       profilePhone,
       maskPhone,
+      isEditingPhone,
+      handleGetPhoneNumber,
       pendingCount,
       shippedCount,
       receivedCount,
       reviewedCount,
       greetingText,
       displayName,
-      canDoBusiness,
       hasAgent,
-      hasSigned,
-      signStatusClass,
-      signingLabel,
-      handleSignTap,
       defaultAddress,
       goToLogin,
       goToAddresses,

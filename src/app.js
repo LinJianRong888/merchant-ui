@@ -54,10 +54,39 @@ async function performSilentLogin () {
 const App = createApp({
   onLaunch () {
     console.log('App launched.')
+
+    // 版本更新检测
+    if (wx.canIUse('getUpdateManager')) {
+      const updateManager = wx.getUpdateManager()
+
+      updateManager.onCheckForUpdate(res => {
+        if (res.hasUpdate) console.log('发现线上新版本')
+      })
+
+      updateManager.onUpdateReady(() => {
+        wx.showModal({
+          title: '版本更新',
+          content: '已检测到新版本，立即重启体验新功能？',
+          confirmText: '立即更新',
+          cancelText: '稍后再说',
+          success: res => {
+            if (res.confirm) {
+              updateManager.applyUpdate()
+            }
+          }
+        })
+      })
+
+      updateManager.onUpdateFailed(() => {
+        wx.showToast({ title: '更新失败，请检查网络', icon: 'none' })
+      })
+    }
+
     void performSilentLogin()
   },
   onShow (options) {
     console.log('App onShow.')
+    void performSilentLogin()
   },
   // 入口组件不需要实现 render 方法，即使实现了也会被 taro 所覆盖
 })

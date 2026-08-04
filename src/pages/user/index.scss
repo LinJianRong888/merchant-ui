@@ -6,6 +6,64 @@
   padding-bottom: 100rpx;
 }
 
+/* ---- 搜索栏 ---- */
+.search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(180deg, #fff 0%, #fff 100%);
+  padding: 88rpx 32rpx 24rpx;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #F5F5F5;
+  border-radius: 48rpx;
+  padding: 20rpx 32rpx;
+}
+
+.search-icon {
+  position: relative;
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.search-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24rpx;
+  height: 24rpx;
+  border: 3rpx solid #999;
+  border-radius: 50%;
+}
+
+.search-icon::after {
+  content: '';
+  position: absolute;
+  top: 22rpx;
+  left: 22rpx;
+  width: 3rpx;
+  height: 16rpx;
+  background: #999;
+  transform: rotate(-45deg);
+  transform-origin: top;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.search-placeholder {
+  color: #999;
+}
+
 /* ---- 用户头部卡片 ---- */
 .user-header {
   padding: 24rpx 24rpx 0;
@@ -240,6 +298,21 @@
   margin-right: 16rpx;
 }
 
+.phone-edit-text {
+  font-size: 24rpx;
+  color: #3b82f6;
+}
+
+.phone-bind-btn {
+  font-size: 24rpx;
+  color: #fff;
+  background: #3b82f6;
+  border-radius: 20rpx;
+  padding: 4rpx 16rpx;
+  line-height: 1.4;
+  border: none;
+}
+
 .login-hint {
   font-size: 28rpx;
   color: #999;
@@ -340,46 +413,28 @@
 
 /* 未登录提示 */
 .login-notice {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 0 24rpx 16rpx;
   display: flex;
   align-items: center;
-  margin: 0 24rpx 16rpx;
-  padding: 20rpx 24rpx;
-  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
-  border-radius: 16rpx;
-  border: 1rpx solid #93c5fd;
+  justify-content: space-between;
 }
 
-.login-notice__icon {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 18rpx;
-  background: #3b82f6;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.login-notice__icon::before {
-  content: '!';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
+.login-notice-text {
   font-size: 24rpx;
-  font-weight: 700;
-}
-
-.login-notice__text {
+  color: #fff;
+  font-weight: 500;
+  line-height: 1.5;
   flex: 1;
-  font-size: 26rpx;
-  color: #1e40af;
-  margin-left: 16rpx;
 }
 
-.login-notice__arrow {
-  font-size: 28rpx;
-  color: #2563eb;
-  flex-shrink: 0;
+.login-notice-arrow {
+  font-size: 32rpx;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 300;
+  margin-left: 12rpx;
 }
 
 .order-section {

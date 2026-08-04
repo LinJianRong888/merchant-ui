@@ -1,18 +1,28 @@
 <template>
   <view class="cart-page">
-    <view class="nav-bar">
-      <view class="nav-more" @tap="handleClearCart">
-        <text class="nav-more-text">清空</text>
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <view class="search-input-wrapper">
+        <view class="search-icon"></view>
+        <input
+          class="search-input"
+          placeholder="请输入商品搜索"
+          placeholder-class="search-placeholder"
+          @tap="handleSearchTap"
+        />
+      </view>
+      <view class="nav-clear" @tap="handleClearCart">
+        <text class="nav-clear-text">清空</text>
       </view>
     </view>
 
     <!-- 未登录提示 -->
     <view v-if="!authStore.isAuthenticated" class="login-notice" @tap="handleLoginPrompt">
-      <view class="login-notice__icon"></view>
-      <text class="login-notice__text">您还未登录，登录后方可使用更多功能</text>
-      <text class="login-notice__arrow">›</text>
+      <text class="login-notice-text">您还未登录，登录后方可使用更多功能</text>
+      <text class="login-notice-arrow">›</text>
     </view>
 
+    <template v-if="authStore.isAuthenticated">
     <view v-if="isLoading" class="loading-view">
       <text class="loading-text">加载中...</text>
     </view>
@@ -63,6 +73,7 @@
         结算 ({{ selectedTotalCount }})
       </button>
     </view>
+    </template>
   </view>
 </template>
 
@@ -153,6 +164,10 @@ export default {
           }
         }
       })
+    }
+
+    function handleSearchTap () {
+      Taro.switchTab({ url: '/pages/products/index' })
     }
 
     async function handleDecreaseQuantity(itemId, currentQuantity) {
@@ -251,6 +266,7 @@ export default {
       isAllSelected,
       goHome,
       handleLoginPrompt,
+      handleSearchTap,
       formatPrice,
       handleDecreaseQuantity,
       handleIncreaseQuantity,
