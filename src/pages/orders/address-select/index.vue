@@ -471,7 +471,7 @@ export default {
             }
             Taro.showToast({ title: '支付成功', icon: 'success' })
             await sleep(1500)
-            await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=paid` })
+            await Taro.navigateTo({ url: `${ORDERS_LIST_PAGE_PATH}?tab=paid` })
             return
           } else {
             Taro.showToast({ title: '支付结果待确认，可在订单列表查看', icon: 'none' })
@@ -480,7 +480,7 @@ export default {
           console.warn('[order-confirm] payment not completed, order exists', paymentError?.message || paymentError)
         }
 
-        await Taro.reLaunch({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
+        await Taro.navigateTo({ url: `${ORDERS_LIST_PAGE_PATH}?tab=pending` })
       } catch (error) {
         console.error('[order-confirm] order creation failed', error)
         Taro.showModal({

@@ -4,6 +4,8 @@ const BASE_URL = process.env.TARO_APP_API_URL || 'http://127.0.0.1:8000'
 const LOGIN_PAGE_PATH = '/pages/index/index'
 
 let isHandlingUnauthorized = false
+let isRefreshingToken = false
+let refreshPromise = null
 
 function createDebugLabel (method, url) {
   return `[request] ${method.toUpperCase()} ${url}`
@@ -37,6 +39,7 @@ function clearAuthStorage () {
   try {
     Taro.removeStorageSync('access_token')
     Taro.removeStorageSync('refresh_token')
+    Taro.removeStorageSync('silent_token')
     Taro.removeStorageSync('auth_session')
   } catch {
   }
@@ -153,8 +156,67 @@ async function baseRequest (options) {
 
   console.debug(`${debugLabel} response json:`, JSON.stringify(response.data, null, 2))
 
-  if (!skipAuth && response.statusCode === 401 && tokenSource === 'auth') {
-    handleUnauthorizedResponse()
+  if (!skipAuth && response.statusCode === 401) {
+    if (tokenSource === 'auth') {
+      // 正式 token 过期 → 尝试 refresh
+      let refreshed = false
+      if (!isRefreshingToken) {
+        const storedRefresh = Taro.getStorageSync('refresh_token')
+        if (storedRefresh) {
+          isRefreshingToken = true
+          refreshPromise = (async () => {
+            try {
+              const res = await Taro.request({
+                url: `${BASE_URL}/api/v1/token/refresh/`,
+                method: 'POST',
+                data: { refresh: storedRefresh },
+                header: { 'Content-Type': 'application/json' },
+                timeout: 15000
+              })
+              if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.access) {
+                Taro.setStorageSync('access_token', res.data.access)
+                if (res.data.refresh) {
+                  Taro.setStorageSync('refresh_token', res.data.refresh)
+                }
+                return true
+              }
+              return false
+            } catch {
+              return false
+            } finally {
+              isRefreshingToken = false
+              refreshPromise = null
+            }
+          })()
+        }
+      }
+      if (refreshPromise) {
+        refreshed = await refreshPromise
+      }
+
+      if (refreshed) {
+        const auth = getAccessToken()
+        if (auth.token) {
+          headers.Authorization = `Bearer ${auth.token}`
+        }
+        return Taro.request({
+          url: fullURL,
+          method,
+          data,
+          header: headers,
+          timeout
+        }).then((retryResponse) => ({
+          data: retryResponse.data,
+          statusCode: retryResponse.statusCode,
+          header: retryResponse.header
+        }))
+      }
+      handleUnauthorizedResponse()
+    } else if (tokenSource === 'silent') {
+      // 静默 token 过期 → 清除并通知重新获取
+      try { Taro.removeStorageSync('silent_token') } catch {}
+      console.warn('[request] silent token expired, cleared')
+    }
   }
 
   return {

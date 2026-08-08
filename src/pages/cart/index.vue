@@ -221,8 +221,35 @@ export default {
       })
     }
 
+    function validateCheckout () {
+      if (!authStore.isAuthenticated) {
+        Taro.showToast({ title: '请先登录', icon: 'none' })
+        return false
+      }
+      if (!hasSelectedItems.value) {
+        Taro.showToast({ title: '请选择要结算的商品', icon: 'none' })
+        return false
+      }
+      // 校验选中商品是否有效（价格、数量、库存）
+      const invalidItems = selectedItems.value.filter(
+        item => !item.price || item.price <= 0 || !item.quantity || item.quantity < 1
+      )
+      if (invalidItems.length > 0) {
+        Taro.showToast({ title: '部分商品信息异常，请重新添加', icon: 'none' })
+        return false
+      }
+      const outOfStock = selectedItems.value.filter(
+        item => item.stock != null && item.stock <= 0
+      )
+      if (outOfStock.length > 0) {
+        Taro.showToast({ title: '部分商品已售罄，请移除后重试', icon: 'none' })
+        return false
+      }
+      return true
+    }
+
     async function handleCheckout() {
-      if (!hasSelectedItems.value) return
+      if (!validateCheckout()) return
 
       isCheckoutLoading.value = true
 

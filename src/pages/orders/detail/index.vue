@@ -41,6 +41,145 @@
         </view>
       </view>
 
+      <!-- 售后进度 - 进行中 -->
+      <view v-if="activeAfterSale" class="detail-card detail-card--aftersale">
+        <view class="detail-card__header">
+          <text class="detail-card__title">售后进度</text>
+          <text class="aftersale-status-tag">{{ afterSaleStatusText }}</text>
+        </view>
+        <view class="detail-info-grid">
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">售后类型</text>
+            <text class="detail-info-item__value">{{ afterSaleTypeLabel }}</text>
+          </view>
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">申请原因</text>
+            <text class="detail-info-item__value">{{ activeAfterSale.reason || '--' }}</text>
+          </view>
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">申请时间</text>
+            <text class="detail-info-item__value">{{ activeAfterSale.applied_at ? formatDateTime(activeAfterSale.applied_at) : '--' }}</text>
+          </view>
+          <view v-if="activeAfterSale.requested_amount" class="detail-info-item">
+            <text class="detail-info-item__label">退款金额</text>
+            <text class="detail-info-item__value is-highlight">{{ formatPrice(activeAfterSale.requested_amount) }}</text>
+          </view>
+        </view>
+
+        <!-- 凭证图片 -->
+        <view v-if="afterSaleEvidence.length" class="aftersale-evidence">
+          <text class="aftersale-evidence__title">凭证图片</text>
+          <view class="aftersale-evidence__list">
+            <image v-for="(img, idx) in afterSaleEvidence" :key="idx" class="aftersale-evidence__img" :src="img.url || img" mode="aspectFill" @tap="previewEvidence(idx)" />
+          </view>
+        </view>
+
+        <!-- 退货物流 -->
+        <view v-if="hasReturnLogisticsInfo" class="aftersale-return">
+          <text class="aftersale-return__title">退货物流</text>
+          <view class="detail-info-grid">
+            <view class="detail-info-item">
+              <text class="detail-info-item__label">快递公司</text>
+              <text class="detail-info-item__value">{{ activeAfterSale.return_courier_company }}</text>
+            </view>
+            <view v-if="activeAfterSale.return_tracking_no" class="detail-info-item">
+              <text class="detail-info-item__label">快递单号</text>
+              <view class="detail-info-item__value-row">
+                <text class="detail-info-item__value">{{ activeAfterSale.return_tracking_no }}</text>
+                <text class="detail-info-item__copy" @tap="copyReturnTrackingNo">复制</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 填写退货物流按钮（V1 暂不支持，后续版本启用） -->
+        <!-- <view v-if="showReturnLogisticsButton && !hasReturnLogisticsInfo" class="aftersale-return-btn" @tap="openReturnLogisticsModal">
+          <text>填写退货物流</text>
+        </view> -->
+
+        <!-- 售后时间线（后端数据优先） -->
+        <view v-if="afterSaleTimeline.length" class="aftersale-timeline">
+          <text class="aftersale-timeline__title">处理记录</text>
+          <view v-for="(entry, idx) in afterSaleTimeline" :key="idx" :class="['aftersale-tl-item', { 'aftersale-tl-item--latest': idx === 0 }]">
+            <view class="aftersale-tl-item__dot"></view>
+            <view v-if="idx < afterSaleTimeline.length - 1" class="aftersale-tl-item__line"></view>
+            <view class="aftersale-tl-item__body">
+              <text class="aftersale-tl-item__title">{{ entry.title }}</text>
+              <text v-if="entry.time" class="aftersale-tl-item__time">{{ entry.time }}</text>
+              <text v-if="entry.desc" class="aftersale-tl-item__desc">{{ entry.desc }}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 兜底：无timeline时用步骤条 -->
+        <view v-else class="aftersale-progress">
+          <view v-for="(step, idx) in afterSaleSteps" :key="idx" :class="['aftersale-step', { 'aftersale-step--active': step.active, 'aftersale-step--done': step.done }]">
+            <view class="aftersale-step__dot">
+              <text v-if="step.done" class="aftersale-step__icon">✓</text>
+              <text v-else-if="step.active" class="aftersale-step__icon">●</text>
+              <text v-else class="aftersale-step__num">{{ idx + 1 }}</text>
+            </view>
+            <text class="aftersale-step__label">{{ step.label }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 售后进度 - 已拒绝 -->
+      <view v-else-if="rejectedAfterSale" class="detail-card detail-card--aftersale">
+        <view class="detail-card__header">
+          <text class="detail-card__title">售后进度</text>
+          <text class="aftersale-status-tag aftersale-status-tag--rejected">审核拒绝</text>
+        </view>
+        <view class="detail-info-grid">
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">售后类型</text>
+            <text class="detail-info-item__value">{{ afterSaleTypeLabel }}</text>
+          </view>
+          <view v-if="rejectedAfterSale.requested_amount" class="detail-info-item">
+            <text class="detail-info-item__label">退款金额</text>
+            <text class="detail-info-item__value is-highlight">{{ formatPrice(rejectedAfterSale.requested_amount) }}</text>
+          </view>
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">申请时间</text>
+            <text class="detail-info-item__value">{{ rejectedAfterSale.applied_at ? formatDateTime(rejectedAfterSale.applied_at) : '--' }}</text>
+          </view>
+        </view>
+        <view v-if="rejectReason" class="aftersale-reject">
+          <text class="aftersale-reject__label">驳回原因</text>
+          <text class="aftersale-reject__text">{{ rejectReason }}</text>
+        </view>
+      </view>
+
+      <!-- 售后进度 - 已完成 -->
+      <view v-else-if="completedAfterSale" class="detail-card detail-card--aftersale detail-card--aftersale-completed">
+        <view class="detail-card__header">
+          <text class="detail-card__title">售后进度</text>
+          <text class="aftersale-status-tag aftersale-status-tag--completed">{{ afterSaleStatusText }}</text>
+        </view>
+        <view class="detail-info-grid">
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">售后类型</text>
+            <text class="detail-info-item__value">{{ afterSaleTypeLabel }}</text>
+          </view>
+          <view v-if="completedAfterSale.requested_amount" class="detail-info-item">
+            <text class="detail-info-item__label">退款金额</text>
+            <text class="detail-info-item__value is-highlight">{{ formatPrice(completedAfterSale.requested_amount) }}</text>
+          </view>
+          <view class="detail-info-item">
+            <text class="detail-info-item__label">申请时间</text>
+            <text class="detail-info-item__value">{{ completedAfterSale.applied_at ? formatDateTime(completedAfterSale.applied_at) : '--' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 售后进度 - 已取消 -->
+      <view v-else-if="cancelledAfterSale" class="detail-card detail-card--aftersale">
+        <view class="detail-card__header">
+          <text class="detail-card__title">售后进度</text>
+          <text class="aftersale-status-tag aftersale-status-tag--cancelled">{{ afterSaleStatusText }}</text>
+        </view>
+      </view>
+
       <view class="detail-card">
         <text class="detail-card__title">商品信息</text>
         <view class="detail-products">
@@ -147,10 +286,20 @@
         <button class="detail-pay-button" :loading="isPaying" @tap="handlePay">继续支付</button>
       </view>
 
-      <view v-else-if="order.status !== 'cancelled'" class="detail-footer">
-        <button class="detail-action-btn detail-action-btn--after-sale" @tap="handleApplyAfterSale">申请售后</button>
-        <button class="detail-action-btn detail-action-btn--service" @tap="handleContactService">咨询客服</button>
+      <view v-else-if="isAfterSale" class="detail-footer">
+        <button v-if="activeAfterSale && activeAfterSale.can_cancel !== false" class="detail-action-btn detail-action-btn--after-sale" @tap="handleCancelAfterSale">{{ cancelAfterSaleLoading ? '取消中...' : '取消售后' }}</button>
+        <button class="detail-action-btn detail-action-btn--service" open-type="contact">咨询客服</button>
         <button v-if="showLogistics" class="detail-action-btn detail-action-btn--logistics" @tap="handleViewLogistics">查看物流</button>
+      </view>
+
+      <view v-else-if="!afterSaleLoading && order.status !== 'cancelled' && order.status !== 'after_sale_closed' && order.status !== 'refund_closed' && order.status !== 'refunding' && order.status !== 'refund' && order.status !== 'after_sale' && isOrderEligibleForAfterSale" class="detail-footer">
+        <button class="detail-action-btn detail-action-btn--after-sale" @tap="handleApplyAfterSale">申请售后</button>
+        <button class="detail-action-btn detail-action-btn--service" open-type="contact">咨询客服</button>
+        <button v-if="showLogistics" class="detail-action-btn detail-action-btn--logistics" @tap="handleViewLogistics">查看物流</button>
+      </view>
+
+      <view v-else class="detail-footer">
+        <button class="detail-action-btn detail-action-btn--service" open-type="contact">咨询客服</button>
       </view>
     </view>
 
@@ -284,6 +433,150 @@
         </view>
       </view>
     </view>
+
+    <!-- 申请售后弹窗 -->
+    <view v-if="showAfterSaleModal" class="tracking-overlay" @tap="closeAfterSaleModal">
+      <view class="tracking-panel" @tap.stop>
+        <view class="tracking-panel__header">
+          <view class="tracking-panel__header-bar"></view>
+          <text class="tracking-panel__title">申请售后</text>
+          <view class="tracking-panel__close" @tap="closeAfterSaleModal">
+            <text class="tracking-panel__close-icon">✕</text>
+          </view>
+        </view>
+
+        <view class="aftersale-body">
+          <!-- 售后类型 -->
+          <text class="aftersale-label">售后类型</text>
+          <view class="aftersale-type-row">
+            <view
+              v-for="t in afterSaleTypeOptions"
+              :key="t.value"
+              :class="['aftersale-type-item', { 'aftersale-type-item--active': afterSaleForm.request_type === t.value, 'aftersale-type-item--disabled': t.disabled }]"
+              @tap="t.disabled ? null : selectAfterSaleType(t.value)"
+            >
+              <text>{{ t.label }}</text>
+            </view>
+          </view>
+          <text v-if="afterSaleTypeHint" class="aftersale-hint">{{ afterSaleTypeHint }}</text>
+
+          <!-- 商品选择 -->
+          <text class="aftersale-label">售后商品</text>
+          <view class="aftersale-items">
+            <view v-for="item in orderItems" :key="item.id" class="aftersale-item">
+              <image v-if="item.product_image" class="aftersale-item__img" :src="item.product_image" mode="aspectFill" />
+              <view v-else class="aftersale-item__img aftersale-item__img--empty"></view>
+              <view class="aftersale-item__info">
+                <text class="aftersale-item__name">{{ item.product_name }}</text>
+                <text class="aftersale-item__price">¥{{ formatItemPrice(item.unit_price) }} × {{ item.quantity }}</text>
+              </view>
+              <view class="aftersale-item__qty">
+                <view class="aftersale-item__qty-btn" @tap="decreaseAfterItem(item)">−</view>
+                <text class="aftersale-item__qty-num">{{ getAfterItemQty(item) }}</text>
+                <view class="aftersale-item__qty-btn" @tap="increaseAfterItem(item)">+</view>
+              </view>
+            </view>
+          </view>
+          <text v-if="!hasSelectedAfterItems" class="aftersale-hint aftersale-hint--warn">请至少选择一件商品</text>
+
+          <!-- 售后原因 -->
+          <text class="aftersale-label">售后原因</text>
+          <view class="aftersale-reasons">
+            <view
+              v-for="r in afterSaleReasonOptions"
+              :key="r.value"
+              :class="['aftersale-reason-tag', { 'aftersale-reason-tag--active': afterSaleForm.reason === r.value }]"
+              @tap="afterSaleForm.reason === r.value ? afterSaleForm.reason = '' : afterSaleForm.reason = r.value"
+            >
+              <text>{{ r.label }}</text>
+            </view>
+          </view>
+          <textarea
+            v-if="afterSaleForm.reason === 'other'"
+            class="aftersale-textarea"
+            :value="afterSaleForm.customReason"
+            placeholder="请描述具体原因（必填）"
+            maxlength="2000"
+            @input="e => afterSaleForm.customReason = e.detail.value"
+          />
+
+          <!-- 凭证图片 -->
+          <text class="aftersale-label">凭证图片（选填，最多6张）</text>
+          <view class="aftersale-images">
+            <view v-for="(img, idx) in afterSaleForm.images" :key="idx" class="aftersale-img-item">
+              <image class="aftersale-img" :src="img.path" mode="aspectFill" />
+              <view class="aftersale-img-del" @tap="removeAfterImage(idx)">✕</view>
+              <view v-if="img.uploading" class="aftersale-img-loading">上传中...</view>
+            </view>
+            <view
+              v-if="afterSaleForm.images.length < 6"
+              class="aftersale-img-item aftersale-img-item--add"
+              @tap="chooseAfterImage"
+            >
+              <text class="aftersale-img-add-icon">+</text>
+            </view>
+          </view>
+
+          <!-- 退款金额预览 -->
+          <view v-if="hasSelectedAfterItems" class="aftersale-amount-preview">
+            <text class="aftersale-amount-preview__label">预计退款金额</text>
+            <text class="aftersale-amount-preview__value">{{ formatPrice(afterSaleEstimatedAmount) }}</text>
+          </view>
+
+          <!-- 提交 -->
+          <button
+            class="aftersale-submit"
+            :disabled="!canSubmitAfterSale || afterSaleSubmitting"
+            :loading="afterSaleSubmitting"
+            @tap="handleSubmitAfterSale"
+          >
+            {{ afterSaleSubmitting ? '提交中...' : '提交申请' }}
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 填写退货物流弹窗 -->
+    <view v-if="showReturnLogisticsModal" class="tracking-overlay" @tap="closeReturnLogisticsModal">
+      <view class="tracking-panel" @tap.stop>
+        <view class="tracking-panel__header">
+          <view class="tracking-panel__header-bar"></view>
+          <text class="tracking-panel__title">填写退货物流</text>
+          <view class="tracking-panel__close" @tap="closeReturnLogisticsModal">
+            <text class="tracking-panel__close-icon">✕</text>
+          </view>
+        </view>
+
+        <view class="aftersale-body">
+          <text class="aftersale-label">快递公司</text>
+          <input
+            class="aftersale-input"
+            :value="returnLogisticsForm.courier_company"
+            placeholder="请输入快递公司名称"
+            placeholder-class="aftersale-placeholder"
+            @input="e => returnLogisticsForm.courier_company = e.detail.value"
+          />
+
+          <text class="aftersale-label">快递单号</text>
+          <input
+            class="aftersale-input"
+            :value="returnLogisticsForm.tracking_no"
+            placeholder="请输入快递单号"
+            placeholder-class="aftersale-placeholder"
+            @input="e => returnLogisticsForm.tracking_no = e.detail.value"
+          />
+
+          <button
+            class="aftersale-submit"
+            :disabled="!returnLogisticsForm.courier_company.trim() || !returnLogisticsForm.tracking_no.trim() || returnLogisticsSubmitting"
+            :loading="returnLogisticsSubmitting"
+            @tap="handleSubmitReturnLogistics"
+          >
+            {{ returnLogisticsSubmitting ? '提交中...' : '确认提交' }}
+          </button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -293,6 +586,7 @@ import Taro, { getCurrentInstance, useLoad, usePullDownRefresh } from '@tarojs/t
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, getOrderDetail, listOrders, cancelOrder, getOrderTracking } from '@/api/orders'
+import { createAfterSale, uploadEvidenceImage, listAfterSales, cancelAfterSale, updateAfterSaleReturnInfo } from '@/api/after-sales'
 import { listSaleProducts } from '@/api/products'
 
 import './index.scss'
@@ -328,14 +622,20 @@ function getStatusMeta (status, shipmentStatus, isSigned, backendLabel) {
     const label = backendLabel.trim()
     if (status === 'pending') return { label, className: 'is-pending' }
     if (status === 'cancelled' || status === 'closed') return { label, className: 'is-cancelled' }
+    if (status === 'completed') return { label: '已完成', className: 'is-paid' }
+    if (shipmentStatus === 'received' || isSigned) return { label: '已签收', className: 'is-paid' }
+    if (status === 'paid') return { label: '待发货', className: 'is-paid' }
     return { label, className: 'is-paid' }
   }
+  if (status === 'after_sale' || status === 'refunding' || status === 'refund') return { label: '售后中', className: 'is-pending' }
+  if (status === 'after_sale_closed' || status === 'refund_closed') return { label: '售后关闭', className: 'is-cancelled' }
+  if (status === 'completed') return { label: '已完成', className: 'is-paid' }
+  if (shipmentStatus === 'received' || isSigned) return { label: '已签收', className: 'is-paid' }
   if (shipmentStatus === 'shipped') return { label: '待收货', className: 'is-paid' }
-  if (status === 'paid') return { label: '已支付', className: 'is-paid' }
+  if (status === 'paid') return { label: '待发货', className: 'is-paid' }
   if (status === 'pending') return { label: '待处理', className: 'is-pending' }
   if (status === 'processing') return { label: '处理中', className: 'is-paid' }
   if (status === 'cancelled' || status === 'closed') return { label: '已取消', className: 'is-cancelled' }
-  if (status === 'completed') return { label: '已完成', className: 'is-paid' }
   return { label: '状态待同步', className: 'is-neutral' }
 }
 
@@ -400,6 +700,7 @@ function getTimelineStep (order) {
   const backend = order?.status
   if (backend === 'cancelled' || backend === 'closed') return 'cancelled'
   if (backend === 'completed') return 'completed'
+  if (order?.shipment_status === 'received') return 'signed'
   if (order?.shipment_status === 'shipped') return 'shipped'
   if (backend === 'paid') return 'paid'
   return 'created'
@@ -408,7 +709,7 @@ function getTimelineStep (order) {
 function getTimelineDefaultLabels () {
   return {
     created: { title: '订单已创建', desc: '订单已提交，等待付款' },
-    paid: { title: '买家已付款', desc: '订单已支付，等待商家发货' },
+    paid: { title: '买家已付款', desc: '订单已付款，等待商家发货' },
     shipped: { title: '商家已发货', desc: '包裹运输中，请注意查收' },
     signed: { title: '已签收', desc: '买家已签收，交易完成' },
     completed: { title: '订单已完成', desc: '订单已签收，交易完成' }
@@ -563,6 +864,7 @@ function buildDetailAddress (trace) {
 
 export default {
   setup () {
+    const DEBUG_AFTERSALE = false
     const orderId = ref('')
     const isPaying = ref(false)
     const isCancelling = ref(false)
@@ -570,6 +872,178 @@ export default {
     const showTrackingPanel = ref(false)
     const trackingData = ref(null)
     const isTrackingLoading = ref(false)
+
+    // ---- 售后数据 ----
+    const afterSaleRecords = ref([])
+    const afterSaleLoading = ref(false)
+    const cancelAfterSaleLoading = ref(false)
+
+    async function fetchAfterSales (orderId) {
+      if (!orderId) return
+      afterSaleLoading.value = true
+      afterSaleRecords.value = [] // 切换订单时先清空旧数据
+      try {
+        const records = await listAfterSales({ order_id: orderId })
+        // 客户端双重过滤，确保只有当前订单的售后记录
+        afterSaleRecords.value = (Array.isArray(records) ? records : [])
+          .filter(r => String(r.order_id || r.order) === String(orderId))
+        console.log('[aftersale] fetched records:', afterSaleRecords.value.length, 'for order:', orderId)
+      } catch (e) {
+        console.warn('[aftersale] fetch failed:', e?.message)
+        afterSaleRecords.value = []
+      } finally {
+        afterSaleLoading.value = false
+      }
+    }
+
+    // ---- 调试：注入测试售后数据 ----
+    function injectTestAfterSales (orderId) {
+      const mockAfterSales = [
+        {
+          id: 'test-return-1',
+          request_id: 'test-return-1',
+          order_id: orderId,
+          status: 'approved_waiting_refund',
+          request_type: 'return',
+          reason: '不想要了',
+          requested_amount: '59.80',
+          applied_at: new Date(Date.now() - 3600000).toISOString(),
+          evidence: [],
+          can_cancel: true,
+          timeline: [
+            { status: 'approved', created_at: new Date().toISOString() },
+            { status: 'applied', created_at: new Date(Date.now() - 3600000).toISOString() }
+          ]
+        },
+        {
+          id: 'test-active-1',
+          request_id: 'test-active-1',
+          order_id: orderId,
+          status: 'applied',
+          request_type: 'refund',
+          reason: '商品破损',
+          requested_amount: '29.90',
+          applied_at: new Date().toISOString(),
+          evidence: [],
+          can_cancel: true,
+          timeline: [
+            { status: 'applied', created_at: new Date().toISOString() }
+          ]
+        },
+        {
+          id: 'test-rejected-1',
+          request_id: 'test-rejected-1',
+          order_id: orderId,
+          status: 'rejected',
+          request_type: 'refund',
+          reason: '质量问题',
+          requested_amount: '39.90',
+          applied_at: new Date(Date.now() - 7200000).toISOString(),
+          rejected_at: new Date(Date.now() - 3600000).toISOString(),
+          reject_reason: '经审核，商品不存在质量问题，您的申请已被驳回',
+          evidence: [],
+          timeline: [
+            { status: 'rejected', created_at: new Date(Date.now() - 3600000).toISOString(), note: '经审核，商品不存在质量问题' },
+            { status: 'applied', created_at: new Date(Date.now() - 7200000).toISOString() }
+          ]
+        },
+        {
+          id: 'test-completed-1',
+          request_id: 'test-completed-1',
+          order_id: orderId,
+          status: 'completed',
+          request_type: 'refund',
+          reason: '发错货',
+          requested_amount: '19.90',
+          applied_at: new Date(Date.now() - 86400000).toISOString(),
+          completed_at: new Date(Date.now() - 43200000).toISOString(),
+          evidence: [],
+          timeline: [
+            { status: 'completed', created_at: new Date(Date.now() - 43200000).toISOString() },
+            { status: 'approved', created_at: new Date(Date.now() - 64800000).toISOString() },
+            { status: 'applied', created_at: new Date(Date.now() - 86400000).toISOString() }
+          ]
+        }
+      ]
+      afterSaleRecords.value = [...mockAfterSales]
+      console.log('[DEBUG aftersale] injected test records:', mockAfterSales.length)
+    }
+
+    // ---- 退货物流填写 ----
+    const showReturnLogisticsModal = ref(false)
+    const returnLogisticsForm = ref({ courier_company: '', tracking_no: '' })
+    const returnLogisticsSubmitting = ref(false)
+
+    const showReturnLogisticsButton = computed(() => {
+      const r = activeAfterSale.value
+      if (!r) return false
+      const type = (r.request_type || '').toLowerCase()
+      if (type !== 'return' && type !== 'return_refund') return false
+      const s = (r.status || r.request_status || '').toLowerCase()
+      return s === 'approved' || s === 'approved_waiting_refund'
+    })
+
+    const hasReturnLogisticsInfo = computed(() => {
+      const r = activeAfterSale.value
+      if (!r) return false
+      return !!(r.return_courier_company || r.return_tracking_no)
+    })
+
+    function openReturnLogisticsModal () {
+      returnLogisticsForm.value = { courier_company: '', tracking_no: '' }
+      showReturnLogisticsModal.value = true
+    }
+
+    function closeReturnLogisticsModal () {
+      showReturnLogisticsModal.value = false
+    }
+
+    async function handleSubmitReturnLogistics () {
+      const r = activeAfterSale.value
+      if (!r) return
+      const requestId = r.request_id || r.id
+      const form = returnLogisticsForm.value
+      if (!form.courier_company.trim() || !form.tracking_no.trim()) {
+        Taro.showToast({ title: '请填写完整物流信息', icon: 'none' })
+        return
+      }
+
+      returnLogisticsSubmitting.value = true
+      try {
+        await updateAfterSaleReturnInfo(requestId, {
+          return_courier_company: form.courier_company.trim(),
+          return_tracking_no: form.tracking_no.trim()
+        })
+        Taro.showToast({ title: '退货物流已提交', icon: 'success' })
+        showReturnLogisticsModal.value = false
+        await fetchAfterSales(order.value?.id)
+      } catch (err) {
+        console.error('[aftersale] submit return logistics failed:', err)
+        Taro.showToast({ title: err?.message || '提交失败，请重试', icon: 'none' })
+      } finally {
+        returnLogisticsSubmitting.value = false
+      }
+    }
+
+    function copyReturnTrackingNo () {
+      const no = activeAfterSale.value?.return_tracking_no
+      if (!no) return
+      Taro.setClipboardData({
+        data: String(no),
+        success: () => {
+          Taro.showToast({ title: '已复制快递单号', icon: 'success' })
+        }
+      })
+    }
+
+    // ---- 售后申请 ----
+    const showAfterSaleModal = ref(false)
+    const afterSaleSubmitting = ref(false)
+    const afterSaleForm = ref({
+      request_type: '',
+      reason: '',
+      images: [] // { path, uploadId, uploading }
+    })
 
     const trackingSigned = computed(() => {
       const label = trackingData.value?.state_label
@@ -587,8 +1061,24 @@ export default {
     })
 
     function fetchTrackingIfNeeded (orderData) {
-      if (orderData?.id && (orderData.shipment_status === 'shipped' || orderData.status === 'completed')) {
+      if (orderData?.id && (orderData.shipment_status === 'shipped' || orderData.shipment_status === 'received' || orderData.status === 'completed')) {
+        // #region debug-point tracking-fetch
+        console.log('[DEBUG order-ship-sign-flow] fetchTrackingIfNeeded triggered:', {
+          orderId: orderData.id,
+          shipment_status: orderData.shipment_status,
+          order_status: orderData.status
+        })
+        // #endregion debug-point tracking-fetch
         getOrderTracking(orderData.id).then(data => {
+          // #region debug-point tracking-data
+          console.log('[DEBUG order-ship-sign-flow] tracking data:', {
+            state_label: data.state_label,
+            status_label: data.status_label,
+            is_signed: data.is_signed,
+            traces_count: data.traces?.length || 0,
+            courier_company: data.courier_company
+          })
+          // #endregion debug-point tracking-data
           trackingData.value = data
         }).catch(() => {})
       }
@@ -622,17 +1112,19 @@ export default {
         }
 
         if (detail) {
-          console.log('[order-status]', {
+          // #region debug-point order-load
+          console.log('[DEBUG order-ship-sign-flow] order loaded:', {
             id: detail.id,
             status: detail.status,
             status_label: detail.status_label,
-            status_display: detail.status_display,
-            display_status: detail.display_status,
             shipment_status: detail.shipment_status,
-            shipment_status_label: detail.shipment_status_label,
-            _allKeys: Object.keys(detail)
+            order_no: detail.order_no,
+            order_type: detail.order_type
           })
+          // #endregion debug-point order-load
           fetchTrackingIfNeeded(detail)
+          await fetchAfterSales(detail.id)
+          if (DEBUG_AFTERSALE) { injectTestAfterSales(detail.id) }
         }
         return detail
       },
@@ -642,12 +1134,17 @@ export default {
     const errorMessage = computed(() => formatQueryError(error.value))
     const createdAtText = computed(() => formatDateTime(order.value?.created_at))
     const statusMeta = computed(() => {
+      // 优先显示售后状态
+      if (activeAfterSale.value) {
+        return { label: '售后中', className: 'is-pending' }
+      }
       const backendLabel = order.value?.status_label
         || order.value?.status_display
         || order.value?.display_status
         || order.value?.shipment_status_label
         || ''
-      return getStatusMeta(order.value?.status, order.value?.shipment_status, trackingSigned.value, backendLabel)
+      const meta = getStatusMeta(order.value?.status, order.value?.shipment_status, trackingSigned.value, backendLabel)
+      return meta
     })
     const orderTypeLabel = computed(() => getOrderTypeLabel(order.value?.order_type))
     const orderItems = computed(() => (Array.isArray(order.value?.items) ? order.value.items : []))
@@ -663,15 +1160,251 @@ export default {
     })
 
     const timelineStep = computed(() => {
-      if (trackingSigned.value) return 'signed'
-      return getTimelineStep(order.value)
+      const step = trackingSigned.value ? 'signed' : getTimelineStep(order.value)
+      // #region debug-point timeline-step
+      console.log('[DEBUG order-ship-sign-flow] timelineStep:', {
+        order_status: order.value?.status,
+        shipment_status: order.value?.shipment_status,
+        tracking_signed: trackingSigned.value,
+        step
+      })
+      // #endregion debug-point timeline-step
+      return step
     })
 
     const showLogistics = computed(() => {
       if (trackingData.value) return true
       const s = order.value?.shipment_status
       const status = order.value?.status
-      return s === 'shipped' || s === 'delivered' || status === 'completed' || trackingSigned.value
+      return s === 'shipped' || s === 'delivered' || s === 'received' || status === 'completed' || trackingSigned.value
+    })
+
+    const isAfterSale = computed(() => {
+      return !!activeAfterSale.value
+    })
+
+    const isOrderEligibleForAfterSale = computed(() => {
+      const status = order.value?.status
+      const s = order.value?.shipment_status
+      // 待发货(paid未发货) / 运输中(shipped) / 已签收(received) / 已完成(completed) 均可售后
+      if (status === 'paid') return true
+      if (s === 'shipped' || s === 'received' || s === 'delivered' || status === 'completed') return true
+      return false
+    })
+
+    const activeAfterSale = computed(() => {
+      const records = afterSaleRecords.value
+      if (!records.length) return null
+      return records.find(r => {
+        const s = (r.status || r.request_status || r.state || r.request_state || '').toLowerCase()
+        const isTerminal = s === 'cancelled' || s === 'canceled' || s === 'cancelled_by_customer' || s === 'closed' || s === 'completed' || s === 'finished' || s === 'rejected'
+        const hasEndTime = r.cancelled_at || r.closed_at || r.refunded_at
+        return !isTerminal && !hasEndTime
+      }) || null
+    })
+
+    const rejectedAfterSale = computed(() => {
+      if (activeAfterSale.value) return null // 有活跃的优先展示活跃
+      const records = afterSaleRecords.value
+      if (!records.length) return null
+      return records.find(r => {
+        const s = (r.status || r.request_status || '').toLowerCase()
+        return s === 'rejected'
+      }) || null
+    })
+
+    const completedAfterSale = computed(() => {
+      if (activeAfterSale.value || rejectedAfterSale.value) return null
+      const records = afterSaleRecords.value
+      if (!records.length) return null
+      return records.find(r => {
+        const s = (r.status || r.request_status || '').toLowerCase()
+        return s === 'completed' || s === 'finished' || s === 'refunded'
+      }) || null
+    })
+
+    const cancelledAfterSale = computed(() => {
+      if (activeAfterSale.value || rejectedAfterSale.value || completedAfterSale.value) return null
+      const records = afterSaleRecords.value
+      if (!records.length) return null
+      return records.find(r => {
+        const s = (r.status || r.request_status || '').toLowerCase()
+        return s === 'cancelled' || s === 'canceled' || s === 'cancelled_by_customer' || s === 'closed'
+      }) || null
+    })
+
+    const displayAfterSale = computed(() => activeAfterSale.value || rejectedAfterSale.value || completedAfterSale.value || cancelledAfterSale.value)
+
+    const afterSaleStatusText = computed(() => {
+      const r = displayAfterSale.value
+      if (!r) return ''
+      const statusMap = {
+        pending: '待审核',
+        submitted: '已提交',
+        applied: '已申请',
+        processing: '处理中',
+        reviewing: '审核中',
+        approved: '已通过',
+        approved_waiting_refund: '等待退款',
+        rejected: '已拒绝',
+        completed: '已完成',
+        finished: '已完成',
+        cancelled: '已取消',
+        canceled: '已取消',
+        cancelled_by_customer: '已取消',
+        closed: '已关闭',
+        refunding: '退款中',
+        refunded: '已退款',
+        returned: '已退货'
+      }
+      const s = (r.status || r.request_status || r.state || r.request_state || '').toLowerCase()
+      return statusMap[s] || '处理中'
+    })
+
+    const afterSaleTypeLabel = computed(() => {
+      const t = (displayAfterSale.value?.request_type || '').toLowerCase()
+      const map = { refund: '仅退款', refund_only: '仅退款', return: '退货退款', return_refund: '退货退款', exchange: '换货' }
+      return map[t] || '售后'
+    })
+
+    const rejectReason = computed(() => {
+      const r = displayAfterSale.value
+      if (!r) return ''
+      const s = (r.status || r.request_status || '').toLowerCase()
+      if (s !== 'rejected') return ''
+      return r.reject_reason || r.rejection_reason || r.rejected_reason
+        || r.review_comment || r.reject_message || r.decline_reason
+        || r.remark || r.admin_note || ''
+    })
+
+    const afterSaleEvidence = computed(() => {
+      const r = displayAfterSale.value
+      if (!r) return []
+      const evidence = r.evidence
+      if (Array.isArray(evidence)) return evidence
+      return []
+    })
+
+    const afterSaleTimeline = computed(() => {
+      const r = displayAfterSale.value
+      if (!r) return []
+      const timeline = r.timeline
+      if (!Array.isArray(timeline) || !timeline.length) return []
+      return timeline.map(entry => {
+        const statusMap = {
+          applied: '提交申请', pending: '提交申请', submitted: '已提交',
+          processing: '审核处理', reviewing: '审核中',
+          approved: '审核通过', approved_waiting_refund: '等待退款',
+          rejected: '审核拒绝', cancelled: '已取消', canceled: '已取消', cancelled_by_customer: '已取消',
+          closed: '已关闭', completed: '已完成', finished: '已完成',
+          refunding: '退款中', refunded: '已退款', returned: '已退货'
+        }
+        const s = (entry.status || entry.action || '').toLowerCase()
+        const title = statusMap[s] || entry.title || entry.status || entry.action || '状态更新'
+        const time = entry.created_at || entry.time || entry.updated_at || ''
+        const desc = entry.note || entry.remark || entry.description || entry.comment || ''
+        return {
+          title,
+          time: time ? formatDateTime(time) : '',
+          desc
+        }
+      })
+    })
+
+    function previewEvidence (idx) {
+      const urls = afterSaleEvidence.value.map(img => img.url || img)
+      if (!urls.length) return
+      Taro.previewImage({
+        current: urls[idx],
+        urls
+      })
+    }
+
+    const afterSaleSteps = computed(() => {
+      const r = displayAfterSale.value
+      if (!r) return []
+      const s = (r.status || r.request_status || r.state || r.request_state || '').toLowerCase()
+      const type = (r.request_type || '').toLowerCase()
+      const isReturn = type === 'return' || type === 'return_refund'
+
+      if (isReturn) {
+        // 退货退款：4步
+        const steps = [
+          { key: 'submit', label: '提交申请', done: false, active: false },
+          { key: 'approve', label: '审核通过', done: false, active: false },
+          { key: 'return', label: '买家退货', done: false, active: false },
+          { key: 'finish', label: '退款到账', done: false, active: false }
+        ]
+        const levelMap = {
+          pending: 0, submitted: 0, applied: 0,
+          processing: 1, reviewing: 1,
+          approved: 1, approved_waiting_refund: 1,
+          refunding: 2, returned: 2,
+          completed: 3, finished: 3, refunded: 3
+        }
+        const currentLevel = levelMap[s]
+        if (currentLevel === undefined) {
+          if (s === 'rejected') {
+            steps[0].done = true
+            steps[1].label = '已拒绝'
+            steps[1].active = true
+          } else if (s === 'cancelled' || s === 'canceled' || s === 'cancelled_by_customer' || s === 'closed') {
+            steps[0].done = true
+            steps[1].label = '已关闭'
+            steps[1].active = true
+          } else {
+            steps[0].active = true
+          }
+          return steps
+        }
+        for (let i = 0; i < steps.length; i++) {
+          if (i < currentLevel) steps[i].done = true
+          else if (i === currentLevel) steps[i].active = true
+        }
+        if (currentLevel >= 3) steps[3].done = true
+        return steps
+      }
+
+      // 仅退款：3步
+      const steps = [
+        { key: 'submit', label: '提交申请', done: false, active: false },
+        { key: 'review', label: '审核处理', done: false, active: false },
+        { key: 'finish', label: '售后完成', done: false, active: false }
+      ]
+      // 状态 → 当前步骤索引：0=提交, 1=审核, 2=完成
+      const levelMap = {
+        pending: 0, submitted: 0, applied: 0,
+        processing: 1, reviewing: 1,
+        approved: 1, approved_waiting_refund: 1,
+        completed: 2, finished: 2,
+        refunding: 1, refunded: 2, returned: 2
+      }
+      const currentLevel = levelMap[s]
+      if (currentLevel === undefined) {
+        // 拒绝/取消等异常状态
+        if (s === 'rejected') {
+          steps[0].done = true
+          steps[1].label = '已拒绝'
+          steps[1].active = true
+        } else if (s === 'cancelled' || s === 'canceled' || s === 'cancelled_by_customer' || s === 'closed') {
+          steps[0].done = true
+          steps[1].label = '已关闭'
+          steps[1].active = true
+        } else {
+          steps[0].active = true
+        }
+        return steps
+      }
+      // 正常流转：完成之前的所有步骤标记 done，当前步骤标记 active
+      for (let i = 0; i < steps.length; i++) {
+        if (i < currentLevel) steps[i].done = true
+        else if (i === currentLevel) steps[i].active = true
+      }
+      // 完成了也全部点亮
+      if (currentLevel >= 2) {
+        steps[2].done = true
+      }
+      return steps
     })
 
     const timelineLabels = computed(() => {
@@ -686,7 +1419,7 @@ export default {
           desc: o.created_desc || o.status_desc || defaults.created.desc
         },
         paid: {
-          title: label || defaults.paid.title,
+          title: defaults.paid.title,
           desc: o.paid_desc || defaults.paid.desc
         },
         shipped: {
@@ -707,6 +1440,13 @@ export default {
     const trackingTraces = computed(() => {
       if (!trackingData.value?.traces) return []
       const list = [...trackingData.value.traces].reverse()
+      // #region debug-point tracking-traces
+      console.log('[DEBUG order-ship-sign-flow] trackingTraces parsed:', {
+        count: list.length,
+        latest_status: list[0]?.status || list[0]?.context || '',
+        icons: list.slice(0, 3).map(t => iconForStateLabel(t.status || t.context || ''))
+      })
+      // #endregion debug-point tracking-traces
       return list.map((t, i) => {
         const isLatest = i === 0
         let dotClass = ''
@@ -812,17 +1552,17 @@ export default {
     })
 
     function iconForStateLabel (label) {
-      if (!label) return '📦'
+      if (!label) return '📝'
       const s = label.toLowerCase()
-      if (s.includes('签收') || s.includes('送达') || s.includes('完成')) return '✅'
-      if (s.includes('派送') || s.includes('配送')) return '🏍'
-      if (s.includes('运输') || s.includes('中转') || s.includes('发往') || s.includes('到达') || s.includes('离开')) return '🚚'
-      if (s.includes('揽收') || s.includes('取件') || s.includes('收件')) return '📦'
-      if (s.includes('待取') || s.includes('待揽') || s.includes('下单')) return '📦'
-      if (s.includes('退回') || s.includes('退件')) return '↩'
-      if (s.includes('异常') || s.includes('滞留') || s.includes('失败') || s.includes('问题件')) return '⚠'
-      if (s.includes('取消')) return '✕'
-      return '🚚'
+      if (s.includes('签收') || s.includes('送达') || s.includes('完成')) return '🎯'
+      if (s.includes('派送') || s.includes('配送')) return '🚲'
+      if (s.includes('运输') || s.includes('中转') || s.includes('发往') || s.includes('到达') || s.includes('离开')) return '✈️'
+      if (s.includes('揽收') || s.includes('取件') || s.includes('收件')) return '📥'
+      if (s.includes('待取') || s.includes('待揽') || s.includes('下单')) return '📝'
+      if (s.includes('退回') || s.includes('退件')) return '⏪'
+      if (s.includes('异常') || s.includes('滞留') || s.includes('失败') || s.includes('问题件')) return '🔴'
+      if (s.includes('取消')) return '⛔'
+      return '✈️'
     }
 
     const iconLarge = computed(() => {
@@ -953,16 +1693,281 @@ export default {
       })
     }
 
-    function handleApplyAfterSale () {
-      Taro.showToast({ title: '售后功能接入中', icon: 'none' })
+    // ---- 售后申请 ----
+    const afterSaleReasonOptions = computed(() => {
+      const ss = order.value?.shipment_status
+      const status = order.value?.status
+      // 待发货（已支付未发货）：仅退款
+      if (status === 'paid' && ss !== 'shipped' && ss !== 'received' && ss !== 'delivered') {
+        return [
+          { value: 'dont_want', label: '不想要了' },
+          { value: 'wrong_info', label: '信息填写错误' },
+          { value: 'price_drop', label: '商品降价' },
+          { value: 'wrong_order', label: '拍错商品' },
+          { value: 'other', label: '其他原因' }
+        ]
+      }
+      // 运输中（已发货未签收）：仅退款
+      if (ss === 'shipped') {
+        return [
+          { value: 'slow_logistics', label: '物流太慢' },
+          { value: 'dont_want', label: '不想要了' },
+          { value: 'not_delivered', label: '快递一直未送达' },
+          { value: 'other', label: '其他原因' }
+        ]
+      }
+      // 已签收 / 已完成
+      // 仅退款原因（未退货，部分补偿）
+      if (afterSaleForm.value.request_type === 'refund_only') {
+        return [
+          { value: 'missing_item', label: '少发货 / 漏发' },
+          { value: 'damaged', label: '商品破损' },
+          { value: 'other', label: '其他原因' }
+        ]
+      }
+      // 退货退款原因
+      return [
+        { value: 'damaged', label: '商品破损' },
+        { value: 'wrong_item', label: '发错货 / 少发货' },
+        { value: 'not_match', label: '与描述不符' },
+        { value: 'quality', label: '质量问题' },
+        { value: 'other', label: '其他原因' }
+      ]
+    })
+
+    const afterSaleTypeOptions = computed(() => {
+      const ss = order.value?.shipment_status
+      const status = order.value?.status
+      // 仅退款：待发货(unshipped) / 运输中(shipped) / 已签收(received/delivered) / 已完成(completed)
+      const refundOk = ss === 'unshipped' || ss === 'shipped' || ss === 'received' || ss === 'delivered' || status === 'completed'
+      // 退货退款：已签收(received/delivered) / 已完成(completed)
+      const returnOk = ss === 'received' || ss === 'delivered' || status === 'completed'
+      return [
+        { value: 'refund_only', label: '仅退款', disabled: !refundOk },
+        { value: 'return_refund', label: '退货退款', disabled: !returnOk }
+      ]
+    })
+
+    const afterSaleTypeHint = computed(() => {
+      const ss = order.value?.shipment_status
+      const status = order.value?.status
+      if (status === 'paid' && ss !== 'shipped' && ss !== 'received') return '' // 待发货：支持仅退款
+      if (ss === 'shipped') return '商品运输中，可申请仅退款'
+      if (ss === 'received' || ss === 'delivered') return ''
+      if (status === 'completed') return ''
+      return '当前状态不支持售后'
+    })
+
+    const hasSelectedAfterItems = computed(() => {
+      return Object.values(afterSaleForm.value._itemQtys || {}).some(q => q > 0)
+    })
+
+    const afterSaleEstimatedAmount = computed(() => {
+      const qtys = afterSaleForm.value._itemQtys || {}
+      let total = 0
+      orderItems.value.forEach(item => {
+        const qty = qtys[item.id] || 0
+        if (qty > 0) {
+          total += (Number(item.unit_price) || 0) * qty
+        }
+      })
+      return total
+    })
+
+    const canSubmitAfterSale = computed(() => {
+      const f = afterSaleForm.value
+      if (!f.request_type || !f.reason || !hasSelectedAfterItems.value) return false
+      if (f.reason === 'other' && !f.customReason.trim()) return false
+      return true
+    })
+
+    function getAfterItemQty (item) {
+      const qtys = afterSaleForm.value._itemQtys || {}
+      return qtys[item.id] || 0
     }
 
-    function handleContactService () {
-      Taro.showToast({ title: '客服功能接入中', icon: 'none' })
+    function decreaseAfterItem (item) {
+      if (!afterSaleForm.value._itemQtys) afterSaleForm.value._itemQtys = {}
+      const current = afterSaleForm.value._itemQtys[item.id] || 0
+      afterSaleForm.value._itemQtys[item.id] = Math.max(0, current - 1)
+    }
+
+    function increaseAfterItem (item) {
+      if (!afterSaleForm.value._itemQtys) afterSaleForm.value._itemQtys = {}
+      const current = afterSaleForm.value._itemQtys[item.id] || 0
+      afterSaleForm.value._itemQtys[item.id] = Math.min(item.quantity, current + 1)
+    }
+
+    function selectAfterSaleType (type) {
+      afterSaleForm.value.request_type = type
+      afterSaleForm.value.reason = ''
+      afterSaleForm.value.customReason = ''
+    }
+
+    function openAfterSaleModal () {
+      const ss = order.value?.shipment_status
+      const status = order.value?.status
+      let defaultType = ''
+      // 待发货（paid 未发货）→ 仅退款
+      if (status === 'paid' && ss !== 'shipped' && ss !== 'received') defaultType = 'refund_only'
+      // 运输中（shipped）→ 仅退款
+      else if (ss === 'shipped') defaultType = 'refund_only'
+      // 已签收 → 退货退款
+      else if (ss === 'received') defaultType = 'return_refund'
+      // 已完成 → 退货退款
+      else if (status === 'completed') defaultType = 'return_refund'
+
+      afterSaleForm.value = {
+        request_type: defaultType,
+        reason: '',
+        customReason: '',
+        images: [],
+        _itemQtys: (orderItems.value || []).reduce((acc, item) => {
+          acc[item.id] = item.quantity
+          return acc
+        }, {})
+      }
+      showAfterSaleModal.value = true
+    }
+
+    function closeAfterSaleModal () {
+      showAfterSaleModal.value = false
+    }
+
+    function chooseAfterImage () {
+      Taro.chooseImage({
+        count: 6 - afterSaleForm.value.images.length,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          const newImages = res.tempFilePaths.map(path => ({
+            path,
+            uploadId: '',
+            uploading: false
+          }))
+          afterSaleForm.value.images.push(...newImages)
+        }
+      })
+    }
+
+    function removeAfterImage (idx) {
+      afterSaleForm.value.images.splice(idx, 1)
+    }
+
+    async function handleSubmitAfterSale () {
+      if (!canSubmitAfterSale.value || afterSaleSubmitting.value || !order.value?.id) return
+
+      afterSaleSubmitting.value = true
+
+      try {
+        // 1. 上传凭证图片
+        const uploadIds = []
+        for (const img of afterSaleForm.value.images) {
+          if (img.uploadId) {
+            uploadIds.push(img.uploadId)
+            continue
+          }
+          img.uploading = true
+          try {
+            const result = await uploadEvidenceImage(img.path, order.value.id)
+            img.uploadId = result.upload_id
+            uploadIds.push(result.upload_id)
+          } catch (err) {
+            console.error('[aftersale] upload image failed:', err)
+            Taro.showToast({ title: '图片上传失败，请重试', icon: 'none' })
+            afterSaleSubmitting.value = false
+            return
+          } finally {
+            img.uploading = false
+          }
+        }
+
+        // 2. 构建请求参数
+        const reasonLabel = afterSaleReasonOptions.find(r => r.value === afterSaleForm.value.reason)?.label || afterSaleForm.value.reason
+        const finalReason = afterSaleForm.value.reason === 'other'
+          ? afterSaleForm.value.customReason.trim()
+          : reasonLabel
+
+        const items = orderItems.value
+          .filter(item => {
+            const qty = afterSaleForm.value._itemQtys[item.id] || 0
+            return qty > 0
+          })
+          .map(item => ({
+            order_item_id: item.id,
+            quantity: afterSaleForm.value._itemQtys[item.id]
+          }))
+
+        const payload = {
+          order_id: order.value.id,
+          request_type: afterSaleForm.value.request_type,
+          reason: finalReason,
+          items,
+          upload_ids: uploadIds
+        }
+
+        console.log('[aftersale] submitting:', payload)
+
+        // 3. 提交售后申请
+        const result = await createAfterSale(payload)
+        console.log('[aftersale] created:', result)
+
+        Taro.showToast({ title: '售后申请已提交', icon: 'success' })
+        showAfterSaleModal.value = false
+        void refetch()
+      } catch (err) {
+        console.error('[aftersale] submit failed:', err)
+        const msg = err?.data?.detail || err?.message || '提交失败，请重试'
+        Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
+      } finally {
+        afterSaleSubmitting.value = false
+      }
+    }
+
+    function handleApplyAfterSale () {
+      openAfterSaleModal()
+    }
+
+    function handleViewAfterSale () {
+      Taro.showToast({ title: '售后处理中，请耐心等待', icon: 'none' })
+    }
+
+    async function handleCancelAfterSale () {
+      const r = activeAfterSale.value
+      if (!r) return
+      const requestId = r.request_id || r.id
+      if (!requestId) return
+
+      const res = await Taro.showModal({
+        title: '取消售后',
+        content: '确定要取消本次售后申请吗？',
+        confirmText: '确定取消',
+        cancelText: '再想想'
+      })
+      if (!res.confirm) return
+
+      cancelAfterSaleLoading.value = true
+      try {
+        await cancelAfterSale(requestId, '用户主动取消')
+        // 立即清空售后记录，隐藏卡片
+        afterSaleRecords.value = []
+        Taro.showToast({ title: '已取消售后', icon: 'success' })
+        // 刷新订单状态 + 重新拉取售后记录（防止竞态）
+        await Promise.all([refetch(), fetchAfterSales(order.value?.id)])
+      } catch (err) {
+        console.error('[aftersale] cancel failed:', err)
+        const msg = err?.message || '取消失败，请重试'
+        Taro.showToast({ title: msg, icon: 'none' })
+      } finally {
+        cancelAfterSaleLoading.value = false
+      }
     }
 
     function handleViewLogistics () {
       if (!order.value?.id) return
+      // #region debug-point tracking-open
+      console.log('[DEBUG order-ship-sign-flow] tracking panel opened:', { orderId: order.value.id })
+      // #endregion debug-point tracking-open
       showTrackingPanel.value = true
       isTrackingLoading.value = true
       getOrderTracking(order.value.id).then((data) => {
@@ -1033,7 +2038,49 @@ export default {
       handleCancel,
       handlePay,
       handleApplyAfterSale,
-      handleContactService,
+      handleViewAfterSale,
+      handleCancelAfterSale,
+      cancelAfterSaleLoading,
+      showReturnLogisticsButton,
+      hasReturnLogisticsInfo,
+      showReturnLogisticsModal,
+      returnLogisticsForm,
+      returnLogisticsSubmitting,
+      openReturnLogisticsModal,
+      closeReturnLogisticsModal,
+      handleSubmitReturnLogistics,
+      copyReturnTrackingNo,
+      completedAfterSale,
+      cancelledAfterSale,
+      afterSaleLoading,
+      isAfterSale,
+      isOrderEligibleForAfterSale,
+      activeAfterSale,
+      displayAfterSale,
+      afterSaleStatusText,
+      afterSaleTypeLabel,
+      rejectReason,
+      afterSaleEvidence,
+      afterSaleTimeline,
+      previewEvidence,
+      afterSaleSteps,
+      showAfterSaleModal,
+      closeAfterSaleModal,
+      selectAfterSaleType,
+      afterSaleForm,
+      afterSaleSubmitting,
+      afterSaleTypeOptions,
+      afterSaleReasonOptions,
+      afterSaleTypeHint,
+      hasSelectedAfterItems,
+      canSubmitAfterSale,
+      afterSaleEstimatedAmount,
+      getAfterItemQty,
+      decreaseAfterItem,
+      increaseAfterItem,
+      chooseAfterImage,
+      removeAfterImage,
+      handleSubmitAfterSale,
       handleViewLogistics,
       closeTrackingPanel,
       hasShipmentStatus,

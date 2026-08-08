@@ -11,6 +11,18 @@ export function loginWithWechatMiniapp ({ code, appSlug = MERCHANT_MINIAPP_SLUG 
   })
 }
 
+/**
+ * 刷新 access_token，使用 refresh_token
+ * 标准 DRF SimpleJWT refresh 端点
+ */
+export function refreshAccessToken (refreshToken) {
+  return request.post('/api/v1/token/refresh/', {
+    refresh: refreshToken
+  }, {
+    skipAuth: true
+  })
+}
+
 export function fetchWechatUserInfo ({ openid, appSlug = MERCHANT_MINIAPP_SLUG }) {
   return request.post('/api/v1/wx/miniapp/user-info/', {
     app_slug: appSlug,

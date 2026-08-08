@@ -15,12 +15,23 @@
     </view>
 
     <view class="products-content">
-    <!-- 未登录提示 -->
-    <view v-if="!authStore.isAuthenticated" class="login-notice" @tap="handleLoginPrompt">
-      <text class="login-notice-text">您还未登录，登录后方可使用更多功能</text>
-      <text class="login-notice-arrow">›</text>
+    <!-- 排序栏 -->
+    <view v-if="productList.length" class="sort-bar">
+      <view
+        v-for="s in sortOptions"
+        :key="s.value"
+        :class="['sort-bar__item', { 'sort-bar__item--active': sortBy === s.value || (s.value === 'stock' && sortBy !== 'default' && sortBy !== 'sales') }]"
+        @tap="handleSortChange(s.value)"
+      >
+        <text class="sort-bar__text">{{ s.label }}</text>
+        <view v-if="s.value === 'stock'" class="sort-bar__arrows">
+          <text :class="['sort-bar__arrow', { 'sort-bar__arrow--up--active': sortBy === 'stock_asc' }]">▲</text>
+          <text :class="['sort-bar__arrow', { 'sort-bar__arrow--down--active': sortBy === 'stock_desc' }]">▼</text>
+        </view>
+      </view>
     </view>
 
+    <!-- 骨架屏加载态 -->
     <view v-if="isLoading" class="product-skeleton-list">
       <view v-for="item in skeletonItems" :key="item" class="product-card product-card--skeleton">
         <view class="product-card__media product-card__media--skeleton"></view>
@@ -32,28 +43,20 @@
       </view>
     </view>
 
-    <view v-else-if="isError" class="state-panel">
+    <!-- 错误态 -->
+    <view v-else-if="isErrorState" class="state-panel">
       <text class="state-panel__title">加载失败</text>
       <text class="state-panel__desc">{{ errorMessage }}</text>
       <button class="state-panel__button" :loading="isFetching" @tap="handleRetry">重试</button>
     </view>
 
-    <view v-else-if="!filteredProducts.length && authStore.isAuthenticated" class="state-panel state-panel--empty">
+    <!-- 空态 -->
+    <view v-else-if="isEmptyState" class="state-panel state-panel--empty">
       <text class="state-panel__title">暂无商品</text>
       <text class="state-panel__desc">当前没有可售商品</text>
     </view>
 
-    <view v-else-if="!filteredProducts.length" class="product-skeleton-list">
-      <view v-for="item in skeletonItems" :key="item" class="product-card product-card--skeleton">
-        <view class="product-card__media product-card__media--skeleton"></view>
-        <view class="product-card__body">
-          <view class="skeleton-line skeleton-line--title"></view>
-          <view class="skeleton-line skeleton-line--meta"></view>
-          <view class="skeleton-line skeleton-line--meta short"></view>
-        </view>
-      </view>
-    </view>
-
+    <!-- 商品列表 -->
     <view v-else class="product-list">
       <view v-for="product in filteredProducts" :key="product.profile_id || product.id" class="product-card" @tap="handleOpenDetail(product)">
         <view class="product-card__media">
@@ -150,6 +153,27 @@ export default {
     const fallbackProducts = ref([])
     const fallbackError = ref(null)
     const searchQuery = ref('')
+    const sortBy = ref('default')
+
+    const sortOptions = [
+      { value: 'default', label: '综合' },
+      { value: 'stock', label: '库存' },
+      { value: 'sales', label: '销量' }
+    ]
+
+    function handleSortChange (value) {
+      if (value === 'stock') {
+        if (sortBy.value === 'stock_desc') {
+          sortBy.value = 'stock_asc'
+        } else if (sortBy.value === 'stock_asc') {
+          sortBy.value = 'default'
+        } else {
+          sortBy.value = 'stock_desc'
+        }
+      } else {
+        sortBy.value = value
+      }
+    }
 
     const {
       data: products,
@@ -168,12 +192,40 @@ export default {
     const hasError = computed(() => isError.value || Boolean(fallbackError.value))
     const errorMessage = computed(() => formatQueryError(fallbackError.value || error.value))
 
+    const safeProductList = computed(() => {
+      const list = productList.value
+      return Array.isArray(list) ? list : []
+    })
+
+    const isErrorState = computed(() => !isLoading.value && hasError.value)
+    const isEmptyState = computed(() => !isLoading.value && !hasError.value && !safeProductList.value.length)
+
     const filteredProducts = computed(() => {
+      let list = safeProductList.value
       const query = searchQuery.value.trim()
-      if (!query) return productList.value
-      return productList.value.filter(p =>
-        (p.name || '').toLowerCase().includes(query.toLowerCase())
-      )
+      if (query) {
+        list = list.filter(p =>
+          (p.name || '').toLowerCase().includes(query.toLowerCase())
+        )
+      }
+      // 排序
+      const sorted = [...list]
+      if (sortBy.value === 'stock_desc') {
+        sorted.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
+      } else if (sortBy.value === 'stock_asc') {
+        sorted.sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0))
+      } else if (sortBy.value === 'sales') {
+        sorted.sort((a, b) => (Number(b.sales) || Number(b.sales_count) || 0) - (Number(a.sales) || Number(a.sales_count) || 0))
+      } else {
+        // 默认排序：销量降序，销量相同按库存降序
+        sorted.sort((a, b) => {
+          const salesA = Number(a.sales) || Number(a.sales_count) || 0
+          const salesB = Number(b.sales) || Number(b.sales_count) || 0
+          if (salesB !== salesA) return salesB - salesA
+          return (Number(b.stock) || 0) - (Number(a.stock) || 0)
+        })
+      }
+      return sorted
     })
 
     function onSearchInput (e) {
@@ -181,12 +233,18 @@ export default {
     }
 
     async function loadProductsDirect () {
-      console.info('[products-page] fallback load start')
-      fallbackError.value = null
-      fallbackProducts.value = normalizeProducts(await listSaleProducts())
-      console.info('[products-page] fallback load success', {
-        count: fallbackProducts.value.length
-      })
+      if (!authStore.isAuthenticated) return
+      try {
+        console.info('[products-page] fallback load start')
+        fallbackError.value = null
+        fallbackProducts.value = normalizeProducts(await listSaleProducts())
+        console.info('[products-page] fallback load success', {
+          count: fallbackProducts.value.length
+        })
+      } catch (e) {
+        console.error('[products-page] fallback load failed:', e?.message)
+        throw e
+      }
     }
 
     async function refreshProducts () {
@@ -194,7 +252,6 @@ export default {
 
       try {
         const result = await refetch()
-
         if (Array.isArray(result.data)) {
           fallbackProducts.value = []
           return
@@ -235,7 +292,9 @@ export default {
 
     useDidShow(() => {
       authStore.hydrate()
-      void refreshProducts()
+      if (authStore.isAuthenticated || authStore.silentTokenVersion > 0) {
+        void refreshProducts()
+      }
     })
 
     usePullDownRefresh(async () => {
@@ -253,12 +312,17 @@ export default {
       handleRetry,
       handleOpenDetail,
       handleLoginPrompt,
-      isError: hasError,
       isFetching,
       isLoading,
+      isErrorState,
+      isEmptyState,
       onSearchInput,
       searchQuery,
-      skeletonItems
+      skeletonItems,
+      sortBy,
+      sortOptions,
+      handleSortChange,
+      productList
     }
   },
 

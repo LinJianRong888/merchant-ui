@@ -60,7 +60,7 @@
     </view>
 
     <!-- 轮播图 -->
-    <swiper v-if="!searchQuery.trim() && banners.length" class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500">
+    <swiper v-if="!searchQuery.trim() && banners.length" class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500" :circular="true">
       <swiper-item v-for="item in banners" :key="item.id" @tap="handleProductDetail(item.id)">
         <view class="banner-slide">
           <image class="banner-image" :src="item.image" mode="aspectFill" />
@@ -86,7 +86,7 @@
     </view>
 
     <!-- 视频介绍展开 -->
-    <view v-if="!searchQuery.trim() && videoExpanded" class="video-intro">
+    <view v-show="!searchQuery.trim() && videoExpanded" class="video-intro">
       <text class="video-intro__desc">点击下方视频了解更多产品详情与使用教程</text>
       <view class="video-list">
         <view class="video-item">
@@ -94,6 +94,7 @@
             class="channel-video"
             finder-user-name="sphYEzSZhQGwmxh"
             feed-id="export/UzFfBgAAxKCBFCBPKAK6jMzT4DCauDwlGNQVW7bwuGuCVPH_Eg"
+            @error="onVideoError"
           />
           <text class="video-item__title">臻品堂生物科技有限公司，旗下品牌"柑之饴"，专注奶茶行业，让餐饮业也能赚奶茶行业的钱</text>
         </view>
@@ -103,6 +104,7 @@
             class="channel-video"
             finder-user-name="sphYEzSZhQGwmxh"
             feed-id="export/UzFfBgAAxL-BVD5TOVWDjMzT4DCadwITgbvaqlUAzjvlJpwYtw"
+            @error="onVideoError"
           />
           <text class="video-item__title">柑之饴奶茶浓缩液制作奶茶方法，简单快捷！</text>
         </view>
@@ -160,6 +162,10 @@ export default {
       videoExpanded.value = !videoExpanded.value
     }
 
+    function onVideoError (e) {
+      console.warn('[home-page] channel-video error:', e.detail)
+    }
+
     const {
       data: products,
       isLoading,
@@ -174,11 +180,16 @@ export default {
     const productList = computed(() => products.value || fallbackProducts.value)
 
     async function loadProductsDirect() {
-      console.info('[home-page] fallback load start')
-      fallbackProducts.value = normalizeProducts(await listSaleProducts())
-      console.info('[home-page] fallback load success', {
-        count: fallbackProducts.value.length
-      })
+      try {
+        console.info('[home-page] fallback load start')
+        fallbackProducts.value = normalizeProducts(await listSaleProducts())
+        console.info('[home-page] fallback load success', {
+          count: fallbackProducts.value.length
+        })
+      } catch (e) {
+        console.error('[home-page] fallback load failed:', e?.message)
+        throw e
+      }
     }
 
     async function refreshProducts() {
@@ -192,7 +203,11 @@ export default {
       } catch {
       }
 
-      await loadProductsDirect()
+      try {
+        await loadProductsDirect()
+      } catch {
+        // 静默失败，首页允许不加载商品列表
+      }
     }
 
     const banners = computed(() => productList.value
@@ -240,8 +255,9 @@ export default {
     }
 
     useDidShow(() => {
-      authStore.hydrate()
-      void refreshProducts()
+      if (authStore.isAuthenticated || authStore.silentTokenVersion > 0) {
+        void refreshProducts()
+      }
     })
 
     usePullDownRefresh(async () => {
@@ -260,6 +276,7 @@ export default {
       searchQuery,
       videoExpanded,
       toggleVideoIntro,
+      onVideoError,
       notices,
       handleProductDetail,
       handleSearchInput,

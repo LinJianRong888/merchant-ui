@@ -53,6 +53,15 @@
         </view>
       </view>
 
+      <view class="quantity-row">
+        <text class="quantity-label">购买数量</text>
+        <view class="quantity-stepper">
+          <view class="quantity-btn" :class="{ 'quantity-btn--disabled': quantity <= 1 }" @tap="handleDecreaseQuantity">-</view>
+          <text class="quantity-value">{{ quantity }}</text>
+          <view class="quantity-btn" :class="{ 'quantity-btn--disabled': quantity >= (product?.stock || 99) }" @tap="handleIncreaseQuantity">+</view>
+        </view>
+      </view>
+
       <view class="bottom-bar">
         <view class="bottom-left">
           <view class="bottom-btn" @tap="goHome">

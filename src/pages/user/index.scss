@@ -233,13 +233,12 @@
 }
 
 .user-name {
-  flex: 1;
   min-width: 0;
   font-size: 29rpx;
   font-weight: bold;
   color: #222;
   line-height: 1.2;
-  margin-right: 16rpx;
+  margin-right: 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

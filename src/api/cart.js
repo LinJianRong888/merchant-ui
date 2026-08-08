@@ -20,6 +20,7 @@ export async function addToCart(product, quantity = 1) {
       id: product.id,
       name: product.name,
       price: product.price,
+      stock: product.stock,
       coverImage: product.coverImage || product.image || '',
       specification: product.specification || '-',
       quantity: quantity

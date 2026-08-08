@@ -37,13 +37,17 @@ function persistSession (state) {
     isNewUser: state.isNewUser,
     phoneNumber: state.phoneNumber,
     purePhoneNumber: state.purePhoneNumber,
-    countryCode: state.countryCode
+    countryCode: state.countryCode,
+    hasAgent: state.hasAgent,
+    canDoBusiness: state.canDoBusiness,
+    esignCooperationSigned: state.esignCooperationSigned
   })
 }
 
 function clearPersistedSession () {
   Taro.removeStorageSync('access_token')
   Taro.removeStorageSync('refresh_token')
+  Taro.removeStorageSync('silent_token')
   Taro.removeStorageSync(SESSION_STORAGE_KEY)
 }
 
@@ -54,28 +58,27 @@ export const useAuthStore = defineStore('auth', {
     hasWechatIdentity: (state) => Boolean(state.openid)
   },
   actions: {
-    hydrate () {
+    hydrate (force = false) {
+      if (!force && this._hydrated) return
+
       const accessToken = Taro.getStorageSync('access_token') || ''
       const refreshToken = Taro.getStorageSync('refresh_token') || ''
       const session = Taro.getStorageSync(SESSION_STORAGE_KEY) || {}
 
-      // 记录当前 hasAgent，session 存在时保持旧值避免页面闪烁
-      const prevHasAgent = this.hasAgent
-
-      this.$patch({
-        ...createDefaultState(),
-        ...session,
-        accessToken,
-        refreshToken,
-        appSlug: session.appSlug || MERCHANT_MINIAPP_SLUG,
-        canDoBusiness: false, // 不持久化，始终以后端为准
-        esignCooperationSigned: false // 不持久化，始终以后端为准
-      })
-
-      // 如果有 session，恢复 hasAgent 旧值，等 syncCanDoBusiness 异步更新
-      if (accessToken && prevHasAgent) {
-        this.hasAgent = true
-      }
+      this._hydrated = true
+      this.accessToken = accessToken
+      this.refreshToken = refreshToken
+      this.appSlug = session.appSlug || MERCHANT_MINIAPP_SLUG
+      this.userId = session.userId ?? null
+      this.identityId = session.identityId ?? null
+      this.openid = session.openid || ''
+      this.isNewUser = Boolean(session.isNewUser)
+      this.phoneNumber = session.phoneNumber || ''
+      this.purePhoneNumber = session.purePhoneNumber || ''
+      this.countryCode = session.countryCode || ''
+      this.hasAgent = Boolean(session.hasAgent)
+      this.canDoBusiness = typeof session.canDoBusiness === 'boolean' ? session.canDoBusiness : false
+      this.esignCooperationSigned = typeof session.esignCooperationSigned === 'boolean' ? session.esignCooperationSigned : false
     },
 
     /**
@@ -94,14 +97,19 @@ export const useAuthStore = defineStore('auth', {
 
         // 调对应签约状态 API
         const signingStatus = await getSigningStatus(userType)
+        // 签约状态 API 优先；若无则回退到用户 profile 中的值
         const value = typeof signingStatus?.can_do_business === 'boolean'
           ? signingStatus.can_do_business
-          : false
+          : (typeof userInfo?.profile?.can_do_business === 'boolean'
+            ? userInfo.profile.can_do_business
+            : false)
 
         this.canDoBusiness = value
         this.esignCooperationSigned = !!signingStatus?.esign_cooperation_signed
         // 判断是否有业务员：canDoBusiness 为 true 一定有；false 时看原因
         this.hasAgent = value || (signingStatus?.business_eligibility_reason !== 'customer_agent_not_assigned')
+        // 状态变更后持久化，避免下次启动闪烁
+        persistSession(this.$state)
         return true
       } catch (err) {
         console.warn('[auth] syncCanDoBusiness 失败，保持本地缓存值')
@@ -147,9 +155,22 @@ export const useAuthStore = defineStore('auth', {
       persistSession(this.$state)
     },
 
-    clearSession () {
+    async clearSession () {
+      this._hydrated = false
       this.$patch(createDefaultState())
       clearPersistedSession()
+      // 清除邀请码绑定标记，避免换用户后残留
+      try { Taro.removeStorageSync('invite_bound') } catch {}
+      // 同步清空购物车
+      try {
+        const { useCartStore } = await import('@/stores/cart')
+        const cartStore = useCartStore()
+        if (cartStore) {
+          await cartStore.clear()
+        }
+      } catch {
+        // 清空购物车失败不影响登出
+      }
     },
 
     notifySilentTokenReady () {

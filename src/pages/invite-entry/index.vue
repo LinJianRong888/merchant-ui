@@ -2,7 +2,7 @@
   <view class="invite-entry-page">
     <!-- 已处理状态 -->
     <view v-if="status === 'done'" class="invite-done">
-      <text class="invite-done-icon">✅</text>
+      <text class="invite-done-icon">&#10004;</text>
       <text class="invite-done-title">加入成功</text>
       <text class="invite-done-desc">即将进入首页…</text>
     </view>
@@ -22,7 +22,7 @@
     <!-- 正常落地页 -->
     <view v-else class="invite-card">
       <view class="invite-logo">
-        <text class="invite-logo-text">P</text>
+        <image class="invite-logo-img" :src="logoImg" mode="aspectFit" />
       </view>
 
       <text class="invite-title">{{ inviteCode ? '您被邀请加入' : '未检测到邀请码' }}</text>
@@ -39,13 +39,14 @@
         <text>{{ errorMsg }}</text>
       </view>
 
-      <!-- 有邀请码：一键加入按钮 -->
+      <!-- 有邀请码：一键加入（同时授权手机号） -->
       <button
         v-if="inviteCode"
         class="invite-btn"
+        open-type="getPhoneNumber"
         :loading="loading"
         :disabled="loading"
-        @tap="handleJoin"
+        @getphonenumber="handleJoinWithPhone"
       >
         <text>{{ loading ? '加入中…' : '一键加入' }}</text>
       </button>
@@ -62,22 +63,6 @@
       <text v-if="inviteCode" class="invite-footer-text">
         加入即代表您同意服务条款和隐私政策
       </text>
-
-      <!-- 手机号绑定（新用户） -->
-      <view v-if="needBindPhone" class="phone-section">
-        <text class="phone-section-title">完成注册</text>
-        <text class="phone-section-desc">绑定手机号以获得完整服务</text>
-        <button
-          class="phone-btn"
-          open-type="getPhoneNumber"
-          :loading="phoneLoading"
-          :disabled="phoneLoading"
-          @getphonenumber="handleGetPhoneNumber"
-        >
-          <text>{{ phoneLoading ? '绑定中…' : '微信手机号一键绑定' }}</text>
-        </button>
-        <button class="phone-skip-btn" @tap="handleSkipPhone">跳过，稍后绑定</button>
-      </view>
     </view>
   </view>
 </template>
@@ -91,6 +76,7 @@ import { merchantInvitationLogin, bindInviteCode as bindInviteCodeApi } from '@/
 import { fetchWechatPhoneNumber } from '@/api/miniapp-auth'
 import { useAuthStore } from '@/stores/auth'
 
+import logoImg from '@/assets/logo.png'
 import './index.scss'
 
 export default {
@@ -98,12 +84,9 @@ export default {
     const authStore = useAuthStore()
 
     const inviteCode = ref('')
-    const status = ref('ready') // ready | loading | already-bound | done
+    const status = ref('ready')
     const loading = ref(false)
     const errorMsg = ref('')
-
-    const needBindPhone = ref(false)
-    const phoneLoading = ref(false)
 
     const maskedCode = computed(() => {
       const code = inviteCode.value
@@ -265,15 +248,22 @@ export default {
       }
     }
 
-    async function handleJoin () {
+    async function handleJoinWithPhone (e) {
       if (loading.value || !inviteCode.value) return
+
+      const phoneCode = e?.detail?.code
+      console.log('[invite-entry] handleJoinWithPhone:', { hasPhoneCode: !!phoneCode })
+      if (!phoneCode) {
+        Taro.showToast({ title: '需要授权手机号才能加入', icon: 'none' })
+        return
+      }
 
       loading.value = true
       errorMsg.value = ''
       status.value = 'loading'
 
       try {
-        // 1. wx.login
+        // 1. wx.login 获取微信登录 code
         const loginRes = await Taro.login()
         if (!loginRes.code) {
           errorMsg.value = '微信登录失败，请在微信中打开'
@@ -282,28 +272,57 @@ export default {
           return
         }
 
-        // 2. 调用邀请登录接口
+        // 2. 邀请登录
         const response = await merchantInvitationLogin({
           code: loginRes.code,
           inviteCode: inviteCode.value
         })
 
+        console.log('[invite-entry] merchantInvitationLogin response:', {
+          statusCode: response.statusCode,
+          customer_bound: response.data?.customer_bound,
+          existing_customer_login: response.data?.existing_customer_login,
+          is_new_user: response.data?.is_new_user,
+          has_access: !!response.data?.access
+        })
+
         if (response.statusCode >= 200 && response.statusCode < 300 && response.data?.access) {
-          // 3. 存储 session，标记已绑定邀请码
           authStore.setSession(response.data)
           Taro.setStorageSync('invite_bound', 'true')
 
-          if (response.data.is_new_user) {
-            // 新用户 → 展示手机号绑定
-            needBindPhone.value = true
-            loading.value = false
-            status.value = 'ready'
-            Taro.showToast({ title: '注册成功，请绑定手机号', icon: 'none', duration: 1500 })
-          } else {
-            // 已有用户 → 直接跳转
-            Taro.showToast({ title: '欢迎回来', icon: 'success', duration: 1200 })
-            navigateToLogin()
+          const isExistingCustomer = response.data?.existing_customer_login && !response.data?.customer_bound
+
+          // 3. 绑定手机号
+          try {
+            console.log('[invite-entry] binding phone with updateProfilePhone=true')
+            const phoneResponse = await fetchWechatPhoneNumber({
+              code: phoneCode,
+              updateProfilePhone: true
+            })
+            console.log('[invite-entry] phone bind response:', {
+              statusCode: phoneResponse.statusCode,
+              phone_number: phoneResponse.data?.phone_number
+            })
+            if (phoneResponse.statusCode >= 200 && phoneResponse.statusCode < 300 && phoneResponse.data?.phone_number) {
+              authStore.setPhoneNumber(phoneResponse.data)
+              console.log('[invite-entry] phone bound successfully')
+            } else {
+              console.warn('[invite-entry] phone bind returned non-OK:', phoneResponse.statusCode, phoneResponse.data)
+              if (!isExistingCustomer) {
+                Taro.showToast({ title: '手机号绑定失败，请稍后在我的页面绑定', icon: 'none', duration: 2000 })
+              }
+            }
+          } catch (phoneErr) {
+            console.error('[invite-entry] phone bind failed:', phoneErr?.statusCode, phoneErr?.message)
+            if (!isExistingCustomer) {
+              Taro.showToast({ title: '手机号绑定失败，请稍后在我的页面绑定', icon: 'none', duration: 2000 })
+            }
           }
+
+          Taro.showToast({ title: isExistingCustomer ? '欢迎回来' : '加入成功', icon: 'success', duration: 1200 })
+          loading.value = false
+          status.value = 'ready'
+          navigateToLogin()
         } else if (response.statusCode === 400) {
           errorMsg.value = '邀请码无效或已过期'
           loading.value = false
@@ -325,41 +344,6 @@ export default {
       }
     }
 
-    async function handleGetPhoneNumber (e) {
-      const phoneCode = e?.detail?.code
-      if (!phoneCode) {
-        Taro.showToast({ title: '未获取到手机号授权', icon: 'none' })
-        return
-      }
-
-      phoneLoading.value = true
-
-      try {
-        const response = await fetchWechatPhoneNumber({
-          code: phoneCode,
-          updateProfilePhone: true
-        })
-
-        if (response.statusCode >= 200 && response.statusCode < 300 && response.data?.phone_number) {
-          authStore.setPhoneNumber(response.data)
-          Taro.showToast({ title: '手机号绑定成功', icon: 'success', duration: 1200 })
-          navigateToLogin()
-        } else {
-          Taro.showToast({ title: response.data?.detail || '手机号绑定失败', icon: 'none' })
-        }
-      } catch (err) {
-        console.error('[invite-entry] phone bind failed:', err)
-        Taro.showToast({ title: '手机号绑定失败，请重试', icon: 'none' })
-      }
-
-      phoneLoading.value = false
-    }
-
-    function handleSkipPhone () {
-      Taro.showToast({ title: '已跳过，可稍后在"我的"页面绑定', icon: 'none', duration: 1500 })
-      navigateToLogin()
-    }
-
     function navigateToLogin () {
       status.value = 'done'
       setTimeout(() => {
@@ -368,16 +352,13 @@ export default {
     }
 
     return {
+      logoImg,
       inviteCode,
       maskedCode,
       status,
       loading,
       errorMsg,
-      needBindPhone,
-      phoneLoading,
-      handleJoin,
-      handleGetPhoneNumber,
-      handleSkipPhone
+      handleJoinWithPhone
     }
   },
 

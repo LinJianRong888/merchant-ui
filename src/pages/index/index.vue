@@ -185,7 +185,8 @@ export default {
     }
 
     useDidShow(() => {
-      authStore.hydrate()
+      // force=true：401 跳转回来后 Storage 已清空，需强制从 Storage 重读
+      authStore.hydrate(true)
 
       if (authStore.isAuthenticated) {
         void redirectToHome()

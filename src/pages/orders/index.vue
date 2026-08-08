@@ -84,6 +84,7 @@ import Taro, { useDidShow, useLoad, usePullDownRefresh } from '@tarojs/taro'
 import { useAppMutation, useAppQuery } from '@/utils/app-query'
 
 import { createOrderPayment, listOrders, cancelOrder, getOrderTracking } from '@/api/orders'
+import { listAfterSales } from '@/api/after-sales'
 import { listSaleProducts } from '@/api/products'
 import { useAuthStore } from '@/stores/auth'
 
@@ -95,7 +96,7 @@ const PAYMENT_POLL_INTERVAL = 1500
 const PAYMENT_POLL_MAX_ATTEMPTS = 4
 
 function normalizeOrderFilter (value) {
-  if (['pending', 'paid', 'shipped', 'completed'].includes(value)) {
+  if (['pending', 'paid', 'shipped', 'completed', 'after_sale'].includes(value)) {
     return value
   }
 
@@ -148,6 +149,9 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backend
     const label = backendLabel.trim()
     if (status === 'pending') return { label, className: 'is-pending', canPay: true }
     if (status === 'cancelled' || status === 'closed') return { label, className: 'is-cancelled', canPay: false }
+    if (status === 'completed') return { label: '已完成', className: 'is-paid', canPay: false }
+    if (shipmentStatus === 'received' || trackingState === 'signed') return { label: '已签收', className: 'is-paid', canPay: false }
+    if (status === 'paid') return { label: '待发货', className: 'is-paid', canPay: false }
     return { label, className: 'is-paid', canPay: false }
   }
 
@@ -160,13 +164,22 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backend
       failed: '异常',
       returning: '退回中',
       returned: '已退回',
-      cancel: '已取消'
+      cancel: '已取消',
+      signed: '已签收'
     }
     return { label: stateMap[trackingState] || '待收货', className: 'is-paid', canPay: false }
   }
 
+  if (status === 'completed') {
+    return { label: '已完成', className: 'is-paid', canPay: false }
+  }
+
+  if (shipmentStatus === 'received') {
+    return { label: '已签收', className: 'is-paid', canPay: false }
+  }
+
   if (status === 'paid') {
-    return { label: '已支付', className: 'is-paid', canPay: false }
+    return { label: '待发货', className: 'is-paid', canPay: false }
   }
 
   if (status === 'pending') {
@@ -181,8 +194,12 @@ function getStatusMeta (status, shipmentStatus, isSigned, trackingState, backend
     return { label: '已取消', className: 'is-cancelled', canPay: false }
   }
 
-  if (status === 'completed') {
-    return { label: '已完成', className: 'is-paid', canPay: false }
+  if (status === 'after_sale' || status === 'refunding' || status === 'refund') {
+    return { label: '售后中', className: 'is-pending', canPay: false }
+  }
+
+  if (status === 'after_sale_closed' || status === 'refund_closed') {
+    return { label: '售后关闭', className: 'is-cancelled', canPay: false }
   }
 
   return { label: '状态待同步', className: 'is-neutral', canPay: false }
@@ -342,22 +359,54 @@ export default {
     })
 
     function isOrderCompleted (item) {
-      return item?.status === 'completed'
+      return item?.status === 'completed' || item?.shipment_status === 'received'
+    }
+
+    function isOrderInAfterSale (item) {
+      if (item?.status === 'after_sale' || item?.status === 'refunding' || item?.status === 'refund') return true
+      return false
+    }
+
+    const afterSaleOrderIds = ref(new Set())
+
+    async function fetchAfterSaleFlags (orders) {
+      if (!orders?.length) return
+      try {
+        const records = await listAfterSales()
+        if (!Array.isArray(records)) return
+        const activeIds = new Set()
+        records.forEach(r => {
+          const s = (r.status || r.request_status || '').toLowerCase()
+          const isTerminal = s === 'cancelled' || s === 'canceled' || s === 'cancelled_by_customer' || s === 'closed' || s === 'completed' || s === 'finished' || s === 'rejected'
+          const hasEndTime = r.cancelled_at || r.closed_at || r.rejected_at || r.refunded_at
+          if (!isTerminal && !hasEndTime) {
+            activeIds.add(String(r.order_id || r.order))
+          }
+        })
+        afterSaleOrderIds.value = activeIds
+      } catch {
+        afterSaleOrderIds.value = new Set()
+      }
     }
 
     const tabs = computed(() => {
       const list = orderList.value
-      const pendingCount = list.filter(o => o.status === 'pending').length
-      const paidCount = list.filter(o => o.status === 'paid' && o.shipment_status !== 'shipped').length
-      const shippedCount = list.filter(o => o.shipment_status === 'shipped' && !isOrderCompleted(o)).length
-      const completedCount = list.filter(o => isOrderCompleted(o)).length
+      const notAfterSale = (o) => !isOrderInAfterSale(o) && !afterSaleOrderIds.value.has(String(o.id))
+      const pendingCount = list.filter(o => o.status === 'pending' && notAfterSale(o)).length
+      const paidCount = list.filter(o => o.status === 'paid' && o.shipment_status !== 'shipped' && o.shipment_status !== 'received' && notAfterSale(o)).length
+      const shippedCount = list.filter(o => o.shipment_status === 'shipped' && !isOrderCompleted(o) && notAfterSale(o)).length
+      const completedCount = list.filter(o => isOrderCompleted(o) && notAfterSale(o)).length
+      const afterSaleCount = list.filter(o => {
+        return isOrderInAfterSale(o) || afterSaleOrderIds.value.has(String(o.id))
+      }).length
 
       return [
         { label: '全部', value: 'all', count: list.length },
         { label: '待处理', value: 'pending', count: pendingCount },
         { label: '待发货', value: 'paid', count: paidCount },
         { label: '待收货', value: 'shipped', count: shippedCount },
-        { label: '已完成', value: 'completed', count: completedCount }
+        { label: '已完成', value: 'completed', count: completedCount },
+        { label: '售后中', value: 'after_sale', count: afterSaleCount }
       ]
     })
 
@@ -375,22 +424,42 @@ export default {
     })
 
     const orderList = computed(() => orders.value || fallbackOrders.value)
+    const displayOrders = computed(() => {
+      return orderList.value.map(order => {
+        const inAfterSale = isOrderInAfterSale(order) || afterSaleOrderIds.value.has(String(order.id))
+        if (inAfterSale && order.statusLabel !== '售后中') {
+          return { ...order, statusLabel: '售后中', statusClass: 'is-pending', canPay: false }
+        }
+        return order
+      })
+    })
     const hasError = computed(() => isError.value || Boolean(fallbackError.value))
     const errorMessage = computed(() => formatQueryError(fallbackError.value || error.value))
     const filteredOrders = computed(() => {
+      const list = displayOrders.value
+      const notAfterSale = (item) => !isOrderInAfterSale(item) && !afterSaleOrderIds.value.has(String(item.id))
+
       if (activeFilter.value === 'all') {
-        return orderList.value
+        return list
       }
       if (activeFilter.value === 'shipped') {
-        return orderList.value.filter((item) => item.shipment_status === 'shipped' && !isOrderCompleted(item))
+        return list.filter((item) => item.shipment_status === 'shipped' && !isOrderCompleted(item) && notAfterSale(item))
       }
       if (activeFilter.value === 'paid') {
-        return orderList.value.filter((item) => item.status === 'paid' && item.shipment_status !== 'shipped')
+        return list.filter((item) => item.status === 'paid' && item.shipment_status !== 'shipped' && item.shipment_status !== 'received' && notAfterSale(item))
       }
       if (activeFilter.value === 'completed') {
-        return orderList.value.filter((item) => isOrderCompleted(item))
+        return list.filter((item) => isOrderCompleted(item) && notAfterSale(item))
       }
-      return orderList.value.filter((item) => item.status === activeFilter.value)
+      if (activeFilter.value === 'pending') {
+        return list.filter((item) => item.status === 'pending' && notAfterSale(item))
+      }
+      if (activeFilter.value === 'after_sale') {
+        return list.filter((item) => {
+          return isOrderInAfterSale(item) || afterSaleOrderIds.value.has(String(item.id))
+        })
+      }
+      return list.filter((item) => item.status === activeFilter.value)
     })
 
     async function loadOrdersDirect () {
@@ -409,7 +478,8 @@ export default {
         const result = await refetch()
 
         if (Array.isArray(result.data)) {
-          fallbackOrders.value = []
+          fallbackOrders.value = result.data
+          void fetchAfterSaleFlags(orderList.value)
           return
         }
       } catch (queryError) {
@@ -421,6 +491,7 @@ export default {
       } catch (directError) {
         fallbackError.value = directError
       }
+      void fetchAfterSaleFlags(orderList.value)
     }
 
     const cancelMutation = useAppMutation({

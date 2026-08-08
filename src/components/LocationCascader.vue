@@ -97,17 +97,17 @@ export default {
 
     const provinceIndex = computed(() => {
       const index = provinceOptions.value.findIndex((option) => option.value === props.modelValue.province)
-      return index >= 0 ? index : 0
+      return index >= 0 ? index : -1
     })
 
     const cityIndex = computed(() => {
       const index = cityOptions.value.findIndex((option) => option.value === props.modelValue.city)
-      return index >= 0 ? index : 0
+      return index >= 0 ? index : -1
     })
 
     const districtIndex = computed(() => {
       const index = districtOptions.value.findIndex((option) => option.value === props.modelValue.district)
-      return index >= 0 ? index : 0
+      return index >= 0 ? index : -1
     })
 
     const selectedProvinceLabel = computed(() => {

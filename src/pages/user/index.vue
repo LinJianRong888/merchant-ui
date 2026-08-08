@@ -99,19 +99,12 @@
       </view>
 
       <!-- 未绑定业务员提示 -->
-      <view v-if="isLoggedIn && !inviteBound && !hasAgent" class="no-agent-tip" @tap="showInviteModal = true">
+      <view v-if="isLoggedIn && !isInviteBound" class="no-agent-tip" @tap="showInviteModal = true">
         <view class="no-agent-tip__icon"></view>
         <text class="no-agent-tip__text">未绑定业务员，点击填写邀请码</text>
         <text class="no-agent-tip__arrow">›</text>
       </view>
 
-      <!-- 底部地址栏 -->
-      <view v-if="isLoggedIn" class="address-bar">
-        <view class="address-left">
-          <text class="address-icon">&#9678;</text>
-          <text class="address-text">{{ defaultAddress }}</text>
-        </view>
-      </view>
     </view>
 
     <view v-if="isLoggedIn" class="order-section">
@@ -159,6 +152,15 @@
           </view>
           <text class="order-label">已完成</text>
         </view>
+        <view class="order-item" @tap="goToOrders('after_sale')">
+          <view class="order-icon-wrap">
+            <image class="order-icon-img" src="@/assets/order-pending.png" mode="aspectFit" />
+            <view v-if="afterSaleCount > 0" class="order-badge">
+              <text class="order-badge-text">{{ afterSaleCount }}</text>
+            </view>
+          </view>
+          <text class="order-label">售后中</text>
+        </view>
       </view>
     </view>
 
@@ -184,12 +186,15 @@
         </view>
         <text class="menu-arrow">›</text>
       </view>
-      <view v-if="isLoggedIn" class="menu-item" :class="{ 'menu-item--disabled': inviteBound || hasAgent }" @tap="inviteBound || hasAgent ? null : showInviteModal = true">
+      <view v-if="isLoggedIn" class="menu-item menu-item--invite" :class="{ 'menu-item--disabled': isInviteBound }" @tap="isInviteBound ? null : showInviteModal = true">
         <view class="menu-left">
-          <view class="menu-icon invite-icon" :class="{ 'invite-icon--done': inviteBound || hasAgent }"></view>
-          <text class="menu-text" :class="{ 'menu-text--muted': inviteBound || hasAgent }">{{ inviteBound || hasAgent ? '已绑定邀请码' : '填写邀请码' }}</text>
+          <view class="menu-icon invite-icon" :class="{ 'invite-icon--done': isInviteBound }"></view>
+          <text class="menu-text" :class="{ 'menu-text--muted': isInviteBound }">
+            <text v-if="isInviteBound">已绑定邀请码</text>
+            <text v-else>填写邀请码</text>
+          </text>
         </view>
-        <text class="menu-arrow" :class="{ 'menu-arrow--muted': inviteBound || hasAgent }">›</text>
+        <text class="menu-arrow" :class="{ 'menu-arrow--muted': isInviteBound }">›</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @tap="handleLogout">
         <view class="menu-left">
@@ -236,7 +241,7 @@ import { useAuthStore } from '@/stores/auth'
 import { getCurrentUser, updateCurrentUser, uploadAvatar } from '@/api/users'
 import { fetchWechatPhoneNumber, loginWithWechatMiniapp, MERCHANT_MINIAPP_SLUG } from '@/api/miniapp-auth'
 import { listOrders } from '@/api/orders'
-import { listUserAddresses } from '@/api/user-addresses'
+import { listAfterSales } from '@/api/after-sales'
 import { bindInviteCode } from '@/api/invitation'
 import './index.scss'
 
@@ -382,16 +387,54 @@ export default {
     })
 
     function isOrderCompleted(item) {
-      return item?.status === 'completed'
+      return item?.status === 'completed' || item?.shipment_status === 'received'
     }
 
-    const pendingCount = computed(() => (orders.value || []).filter(item => item.status === 'pending').length)
-    const shippedCount = computed(() => (orders.value || []).filter(item => item.status === 'paid' && item.shipment_status !== 'shipped').length)
+    function isOrderInAfterSale(item) {
+      if (item?.status === 'after_sale' || item?.status === 'refunding' || item?.status === 'refund') return true
+      return false
+    }
+
+    const afterSaleCount = ref(0)
+    const afterSaleOrderIds = ref(new Set())
+
+    async function fetchAfterSaleCount() {
+      if (!authStore.isAuthenticated) return
+      try {
+        const records = await listAfterSales()
+        if (!Array.isArray(records)) return
+        let count = 0
+        const activeIds = new Set()
+        records.forEach(r => {
+          const s = (r.status || r.request_status || '').toLowerCase()
+          const isTerminal = s === 'cancelled' || s === 'canceled' || s === 'cancelled_by_customer' || s === 'closed' || s === 'completed' || s === 'finished' || s === 'rejected'
+          const hasEndTime = r.cancelled_at || r.closed_at || r.rejected_at || r.refunded_at
+          if (!isTerminal && !hasEndTime) {
+            count++
+            activeIds.add(String(r.order_id || r.order))
+          }
+        })
+        afterSaleCount.value = count
+        afterSaleOrderIds.value = activeIds
+      } catch {
+        afterSaleCount.value = 0
+        afterSaleOrderIds.value = new Set()
+      }
+    }
+
+    const notAfterSaleFilter = (item) => {
+      if (isOrderInAfterSale(item)) return false
+      if (afterSaleOrderIds.value.has(String(item.id))) return false
+      return true
+    }
+
+    const pendingCount = computed(() => (orders.value || []).filter(item => item.status === 'pending' && notAfterSaleFilter(item)).length)
+    const shippedCount = computed(() => (orders.value || []).filter(item => item.status === 'paid' && item.shipment_status !== 'shipped' && item.shipment_status !== 'received' && notAfterSaleFilter(item)).length)
     const receivedCount = computed(() => (orders.value || []).filter(item => {
-      return item.shipment_status === 'shipped' && !isOrderCompleted(item)
+      return item.shipment_status === 'shipped' && !isOrderCompleted(item) && notAfterSaleFilter(item)
     }).length)
     const reviewedCount = computed(() => {
-      const completed = (orders.value || []).filter(item => isOrderCompleted(item))
+      const completed = (orders.value || []).filter(item => isOrderCompleted(item) && notAfterSaleFilter(item))
       console.log('[user-center] reviewedCount completed orders:', completed.map(o => ({ id: o.id, status: o.status, shipment_status: o.shipment_status })))
       return completed.length
     })
@@ -412,53 +455,6 @@ export default {
         || '用户'
     })
 
-    // hasAgent 统一从 authStore 读取（由 syncCanDoBusiness 同步）
-    const hasAgent = computed(() => authStore.hasAgent)
-
-    const userType = computed(() => userInfo.value?.user_type || 'customer')
-
-    // 地址：优先后端 profile.address，其次取收货地址
-    const defaultAddress = ref('')
-
-    function updateDisplayAddress () {
-      const profileAddr = userInfo.value?.profile?.address
-      if (profileAddr) {
-        defaultAddress.value = profileAddr
-        return
-      }
-      void fetchDefaultAddress()
-    }
-
-    async function fetchDefaultAddress () {
-      try {
-        const list = await listUserAddresses()
-        if (Array.isArray(list) && list.length > 0) {
-          const addr = list.find(a => a.is_default) || list[0]
-          defaultAddress.value = [addr.province, addr.city, addr.district]
-            .filter(Boolean)
-            .join('')
-        }
-      } catch {
-        // 静默失败，保持占位文字
-      }
-    }
-
-    // ---- 生命周期 ----
-    useDidShow(async () => {
-      authStore.hydrate()
-      // 启动时与后端核对 can_do_business（await 避免闪烁）
-      await authStore.syncCanDoBusiness()
-      // 刷新本地邀请码绑定状态
-      inviteBound.value = Taro.getStorageSync(INVITE_BOUND_KEY) || false
-      // 刷新本地头像
-      avatarUrl.value = Taro.getStorageSync(STORAGE_AVATAR_KEY) || ''
-      // 如果已登录，刷新后端用户信息和签署状态
-      if (authStore.isAuthenticated) {
-        refetchUser()
-        updateDisplayAddress()
-      }
-    })
-
     // ---- 邀请码 ----
     const INVITE_BOUND_KEY = 'invite_bound'
     const showInviteModal = ref(false)
@@ -466,6 +462,33 @@ export default {
     const inviteSubmitting = ref(false)
     // 从 localStorage 恢复绑定状态（canDoBusiness 由后端同步，inviteBound 由前端记录）
     const inviteBound = ref(Taro.getStorageSync(INVITE_BOUND_KEY) || false)
+    // hasAgent 从 authStore 缓存读取，首次渲染即正确
+    const hasAgent = computed(() => authStore.hasAgent)
+    // 邀请码绑定状态：首次渲染即确定，不会异步变化产生闪烁
+    const isInviteBound = computed(() => inviteBound.value || hasAgent.value)
+
+    // ---- 生命周期 ----
+    useDidShow(() => {
+      // 只在状态可能变化时才同步
+      if (!authStore.hasAgent) {
+        authStore.syncCanDoBusiness()
+      }
+      // 刷新本地邀请码绑定状态（值不变时不触发渲染）
+      const storedBound = Taro.getStorageSync(INVITE_BOUND_KEY) || false
+      if (inviteBound.value !== storedBound) {
+        inviteBound.value = storedBound
+      }
+      // 刷新本地头像
+      const storedAvatar = Taro.getStorageSync(STORAGE_AVATAR_KEY) || ''
+      if (avatarUrl.value !== storedAvatar) {
+        avatarUrl.value = storedAvatar
+      }
+      // 如果已登录，刷新后端用户信息和签署状态
+      if (authStore.isAuthenticated) {
+        refetchUser()
+        fetchAfterSaleCount()
+      }
+    })
 
     function onInviteCodeInput (e) {
       inviteCodeInput.value = e.detail?.value || ''
@@ -652,10 +675,11 @@ export default {
       shippedCount,
       receivedCount,
       reviewedCount,
+      afterSaleCount,
       greetingText,
       displayName,
       hasAgent,
-      defaultAddress,
+      isInviteBound,
       goToLogin,
       goToAddresses,
       goToOrders,

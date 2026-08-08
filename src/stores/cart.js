@@ -90,10 +90,11 @@ export const useCartStore = defineStore('cart', {
 
     async clearSelected(selectedIds) {
       try {
-        const results = await Promise.all(
-          selectedIds.map((id) => removeFromCart(id))
-        )
-        const lastResult = results[results.length - 1] || { cartItems: [], totalItems: 0 }
+        // 顺序删除避免并行读/写 Storage 竞态
+        let lastResult = { cartItems: [], totalItems: 0 }
+        for (const id of selectedIds) {
+          lastResult = await removeFromCart(id)
+        }
 
         this.items = lastResult.cartItems
         this.totalCount = lastResult.totalItems
